@@ -1,0 +1,161 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>Overview</class>
+ <widget class="QMainWindow" name="Overview">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>424</width>
+    <height>374</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Overview</string>
+  </property>
+  <widget class="QWidget" name="centralWidget">
+   <layout class="QVBoxLayout" name="verticalLayout">
+    <item>
+     <widget class="QLabel" name="accountLabel">
+      <property name="text">
+       <string>Account info:</string>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QTableView" name="accountTable">
+      <property name="baseSize">
+       <size>
+        <width>0</width>
+        <height>200</height>
+       </size>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QLabel" name="playerLabel">
+      <property name="text">
+       <string>Current player info:</string>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QTableView" name="playerTable"/>
+    </item>
+   </layout>
+  </widget>
+  <widget class="QMenuBar" name="menuBar">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>0</y>
+     <width>424</width>
+     <height>20</height>
+    </rect>
+   </property>
+   <widget class="QMenu" name="menuApi">
+    <property name="title">
+     <string>Api</string>
+    </property>
+    <addaction name="actionSet_Api_Key"/>
+   </widget>
+   <widget class="QMenu" name="menuFile">
+    <property name="title">
+     <string>File</string>
+    </property>
+    <addaction name="actionExit"/>
+   </widget>
+   <widget class="QMenu" name="menuWindow">
+    <property name="title">
+     <string>Window</string>
+    </property>
+    <addaction name="actionMap_View"/>
+   </widget>
+   <widget class="QMenu" name="menuHelp">
+    <property name="title">
+     <string>Help</string>
+    </property>
+   </widget>
+   <addaction name="menuFile"/>
+   <addaction name="menuApi"/>
+   <addaction name="menuWindow"/>
+   <addaction name="menuHelp"/>
+  </widget>
+  <widget class="QStatusBar" name="statusBar">
+   <property name="enabled">
+    <bool>true</bool>
+   </property>
+  </widget>
+  <action name="actionSet_Api_Key">
+   <property name="text">
+    <string>Set Api Key...</string>
+   </property>
+  </action>
+  <action name="actionExit">
+   <property name="text">
+    <string>Exit</string>
+   </property>
+  </action>
+  <action name="actionMap_View">
+   <property name="text">
+    <string>Map View</string>
+   </property>
+  </action>
+ </widget>
+ <layoutdefault spacing="6" margin="11"/>
+ <resources/>
+ <connections>
+  <connection>
+   <sender>actionSet_Api_Key</sender>
+   <signal>triggered()</signal>
+   <receiver>Overview</receiver>
+   <slot>setApiKey()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>199</x>
+     <y>149</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionExit</sender>
+   <signal>triggered()</signal>
+   <receiver>Overview</receiver>
+   <slot>close()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>206</x>
+     <y>149</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionMap_View</sender>
+   <signal>triggered()</signal>
+   <receiver>Overview</receiver>
+   <slot>toggleMapView()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>211</x>
+     <y>35</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>211</x>
+     <y>186</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
+ <slots>
+  <slot>setApiKey()</slot>
+  <slot>toggleMapView()</slot>
+ </slots>
+</ui>
