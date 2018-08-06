@@ -108,6 +108,12 @@ void MapView::paintEvent(QPaintEvent *event)
         }
     }
 
+    // finally, draw the character position indicator
+    QPen pen;
+    pen.setWidth(20);
+    pen.setColor(Qt::red);
+    painter.setPen(pen);
+    painter.drawPoint(worldToPixel(size(),center,zoom,center));
     QWidget::paintEvent(event);
 }
 
