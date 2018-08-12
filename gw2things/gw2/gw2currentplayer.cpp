@@ -47,7 +47,7 @@ QVariant GW2CurrentPlayer::data(const QModelIndex &index, int role) const
             default: return QVariant();
             }
         } else {
-            const auto& mumble = GW2Api::getApi()->getCurrentPlayerData();
+            const auto& mumble = GW2::GW2Api::getApi()->getCurrentPlayerData();
 
             switch(index.row()) {
             case 0: return mumble.getName();

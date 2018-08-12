@@ -3,10 +3,11 @@
 #include <QTimer>
 #include <QImage>
 #include <QVector2D>
-#include "gw2/gw2api.h"
 #include <cmath>
 #include <QGridLayout>
 #include <QPushButton>
+
+#include "gw2api.h"
 
 #define TILE_SIZE 256.0F
 
@@ -82,7 +83,7 @@ void MapView::paintEvent(QPaintEvent *event)
 {
     (void)event; // not using this atm
     QPainter painter(this);
-    auto api = GW2Api::getApi();
+    auto api = GW2::GW2Api::getApi();
 
     for (auto t: visibleTiles) {
         auto p = worldToPixel(size(),center,t.zoom,t.getTopLeft());
@@ -133,72 +134,73 @@ void MapView::updateData()
             tile.x = static_cast<int>(floor(worldCoord.x()*powf(2.f,zoom)/32768.0f));
             tile.y = static_cast<int>(floor(worldCoord.y()*powf(2.f,zoom)/32768.0f));
             if (tile.x >= 0 && tile.x < pow(2,zoom) && tile.y >= 0 && tile.y <= pow(2,zoom)) {
-                GW2Api::getApi()->cacheTile(1,1,zoom,tile.x,tile.y);
+                GW2::GW2Api::getApi()->cacheTile(1,1,zoom,tile.x,tile.y);
                 visibleTiles.push_back(tile);
             }
         }
     }
 
     // reocurring tasks, more or less. fetch map, then fetch pois about map, populate pois array, etc.
-    if (GW2Api::getApi()->isGameRunning()) {
-        QString endpoint = QString("maps/%1").arg(GW2Api::getApi()->getCurrentPlayerData().getMapId());
-        auto mapDataArray = GW2Api::getApi()->getCached(endpoint);
-        if (!mapDataArray.isEmpty()) {
-            auto mapData = QJsonDocument::fromJson(mapDataArray);
-            continentRect.setLeft(mapData["continent_rect"][0][0].toDouble());
-            continentRect.setTop(mapData["continent_rect"][0][1].toDouble());
-            continentRect.setRight(mapData["continent_rect"][1][0].toDouble());
-            continentRect.setBottom(mapData["continent_rect"][1][1].toDouble());
-            mapRect.setLeft(mapData["map_rect"][0][0].toDouble()); // top and bottom be switched for what ever fucking reason
-            mapRect.setTop(mapData["map_rect"][0][1].toDouble());
-            mapRect.setRight(mapData["map_rect"][1][0].toDouble());
-            mapRect.setBottom(mapData["map_rect"][1][1].toDouble());
-            moved = true;
-            //floor = mapData["default_floor"].toInt();
+    if (GW2::GW2Api::getApi()->isGameRunning()) {
+        QString endpoint = QString("maps/%1").arg(GW2::GW2Api::getApi()->getCurrentPlayerData().getMapId());
+        GW2::GW2Api::getApi()->get(endpoint,true,[=](QByteArray mapDataArray){
+            if (!mapDataArray.isEmpty()) {
+                auto mapData = QJsonDocument::fromJson(mapDataArray);
+                continentRect.setLeft(mapData["continent_rect"][0][0].toDouble());
+                continentRect.setTop(mapData["continent_rect"][0][1].toDouble());
+                continentRect.setRight(mapData["continent_rect"][1][0].toDouble());
+                continentRect.setBottom(mapData["continent_rect"][1][1].toDouble());
+                mapRect.setLeft(mapData["map_rect"][0][0].toDouble()); // top and bottom be switched for what ever fucking reason
+                mapRect.setTop(mapData["map_rect"][0][1].toDouble());
+                mapRect.setRight(mapData["map_rect"][1][0].toDouble());
+                mapRect.setBottom(mapData["map_rect"][1][1].toDouble());
+                moved = true;
+                //floor = mapData["default_floor"].toInt();
 
-            // up next are pois.
-            int region = mapData["region_id"].toInt();
-            int continent = mapData["continent_id"].toInt();
-            int nFloor = mapData["default_floor"].toInt();
-            QString poisEndpoint = QString("continents/%1/floors/%2/regions/%3/maps/%4")
-                    .arg(continent)
-                    .arg(nFloor)
-                    .arg(region)
-                    .arg(GW2Api::getApi()->getCurrentPlayerData().getMapId());
-            auto poiDataArray = GW2Api::getApi()->getCached(poisEndpoint);
-            if (!poiDataArray.isEmpty()) {
-                auto poiData = QJsonDocument::fromJson(poiDataArray);
-                visibleIcons.clear();
-                auto pois = poiData["points_of_interest"].toObject();
-                for(auto poiRef : pois) {
-                    QJsonObject poi = poiRef.toObject();
-                    Icon i;
-                    i.isRawResource = false;
-                    i.name = poi["name"].toString();
-                    i.pos.setX(static_cast<float>(poi["coord"].toArray()[0].toDouble()));
-                    i.pos.setY(static_cast<float>(poi["coord"].toArray()[1].toDouble()));
+                // up next are pois.
+                int region = mapData["region_id"].toInt();
+                int continent = mapData["continent_id"].toInt();
+                int nFloor = mapData["default_floor"].toInt();
+                QString poisEndpoint = QString("continents/%1/floors/%2/regions/%3/maps/%4")
+                        .arg(continent)
+                        .arg(nFloor)
+                        .arg(region)
+                        .arg(GW2::GW2Api::getApi()->getCurrentPlayerData().getMapId());
+                GW2::GW2Api::getApi()->get(poisEndpoint,true,[=](QByteArray poiDataArray) {
+                    if (!poiDataArray.isEmpty()) {
+                        auto poiData = QJsonDocument::fromJson(poiDataArray);
+                        visibleIcons.clear();
+                        auto pois = poiData["points_of_interest"].toObject();
+                        for(auto poiRef : pois) {
+                            QJsonObject poi = poiRef.toObject();
+                            Icon i;
+                            i.isRawResource = false;
+                            i.name = poi["name"].toString();
+                            i.pos.setX(static_cast<float>(poi["coord"].toArray()[0].toDouble()));
+                            i.pos.setY(static_cast<float>(poi["coord"].toArray()[1].toDouble()));
 
-                    QString type = poi["type"].toString();
-                    if (type == "waypoint") {
-                        i.id = "map_waypoint";
-                    } else if (type == "vista") {
-                        i.id = "map_vista";
-                    } else if (type == "landmark") {
-                        i.id = "map_poi";
-                    } else if (poi.contains("icon")) {
-                        i.id = poi["icon"].toString();
-                        i.isRawResource = true;
+                            QString type = poi["type"].toString();
+                            if (type == "waypoint") {
+                                i.id = "map_waypoint";
+                            } else if (type == "vista") {
+                                i.id = "map_vista";
+                            } else if (type == "landmark") {
+                                i.id = "map_poi";
+                            } else if (poi.contains("icon")) {
+                                i.id = poi["icon"].toString();
+                                i.isRawResource = true;
+                            }
+                            else{
+                                continue;
+                            }
+
+                            visibleIcons.push_back(i);
+                        }
                     }
-                    else{
-                        continue;
-                    }
-
-                    visibleIcons.push_back(i);
-                }
+                });
+                moved = true;
             }
-
-            moved = true;
-        }
+        });
     }
 
     update();
@@ -206,9 +208,9 @@ void MapView::updateData()
 
 void MapView::updateMovement()
 {
-    if (moved && GW2Api::getApi()->isGameRunning()) {
+    if (moved && GW2::GW2Api::getApi()->isGameRunning()) {
         // update map center over here
-        auto pos = GW2Api::getApi()->getCurrentPlayerData().getPos();
+        auto pos = GW2::GW2Api::getApi()->getCurrentPlayerData().getPos();
         center = mapToWorld(mapRect,continentRect,QVector2D(pos.x(),pos.z()));
         update();
     }

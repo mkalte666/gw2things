@@ -11,10 +11,12 @@
 Overview::Overview(QWidget *parent) :
     QMainWindow(parent),
     ui(new Ui::Overview),
-    mapview(nullptr)
+    api(QSettings().value("apikey").toString(),this),
+    mapview(nullptr),
+    inventoryview(nullptr),
+    manualquery(nullptr)
 {
     ui->setupUi(this);
-
 
     QTimer *timer = new QTimer(this);
     connect(timer, &QTimer::timeout, this, &Overview::updateData);
@@ -34,6 +36,7 @@ void Overview::setApiKey()
     QString key = QInputDialog::getText(this, tr("Set GW2 Api Key"), tr("Key: "), QLineEdit::Password, "",&ok);
     if (ok) {
         QSettings().setValue("apikey",key);
+        api.setApiKey(key);
     }
 }
 
@@ -62,5 +65,35 @@ void Overview::toggleMapView()
     mapview->show();
     connect(mapview,&QWidget::destroyed,[this]() {
         mapview = nullptr;
+    });
+}
+
+void Overview::toggleInventoryView()
+{
+    if (inventoryview) {
+        inventoryview->close();
+        inventoryview->deleteLater();
+        return;
+    }
+
+    inventoryview = new InventoryView(this);
+    inventoryview->show();
+    connect(inventoryview, &QWidget::destroyed, [this]() {
+       inventoryview = nullptr;
+    });
+}
+
+void Overview::toggleManualQuery()
+{
+    if (manualquery) {
+        manualquery->close();
+        manualquery->deleteLater();
+        return;
+    }
+
+    manualquery = new ManualQuery(this);
+    manualquery->show();
+    connect(manualquery, &QWidget::destroyed, [this]() {
+       manualquery = nullptr;
     });
 }

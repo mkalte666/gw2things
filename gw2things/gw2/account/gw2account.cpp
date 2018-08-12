@@ -1,5 +1,5 @@
 #include "gw2account.h"
-#include "gw2/gw2api.h"
+#include "gw2api.h"
 #include <QTimer>
 #include <QDebug>
 
@@ -127,9 +127,7 @@ int GW2Account::getWvwRank() const
 
 void GW2Account::updateData()
 {
-    auto reply = GW2Api::getApi()->get("account");
-    reply->connect(reply,&QNetworkReply::finished,[this,reply](){
-        auto result = reply->readAll();
+    GW2::GW2Api::getApi()->get("account",false,[=](QByteArray result){
         auto document = QJsonDocument::fromJson(result);
         id = document["id"].toString();
         name = document["name"].toString();

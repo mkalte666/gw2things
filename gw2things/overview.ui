@@ -70,15 +70,23 @@
      <string>Window</string>
     </property>
     <addaction name="actionMap_View"/>
+    <addaction name="actionInventory_View"/>
    </widget>
    <widget class="QMenu" name="menuHelp">
     <property name="title">
      <string>Help</string>
     </property>
    </widget>
+   <widget class="QMenu" name="menuTools">
+    <property name="title">
+     <string>Tools</string>
+    </property>
+    <addaction name="actionManual_Query"/>
+   </widget>
    <addaction name="menuFile"/>
    <addaction name="menuApi"/>
    <addaction name="menuWindow"/>
+   <addaction name="menuTools"/>
    <addaction name="menuHelp"/>
   </widget>
   <widget class="QStatusBar" name="statusBar">
@@ -99,6 +107,16 @@
   <action name="actionMap_View">
    <property name="text">
     <string>Map View</string>
+   </property>
+  </action>
+  <action name="actionInventory_View">
+   <property name="text">
+    <string>Inventory View</string>
+   </property>
+  </action>
+  <action name="actionManual_Query">
+   <property name="text">
+    <string>Manual Query</string>
    </property>
   </action>
  </widget>
@@ -144,8 +162,40 @@
    <slot>toggleMapView()</slot>
    <hints>
     <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
      <x>211</x>
-     <y>35</y>
+     <y>186</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionInventory_View</sender>
+   <signal>triggered()</signal>
+   <receiver>Overview</receiver>
+   <slot>toggleInventoryView()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>211</x>
+     <y>186</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionManual_Query</sender>
+   <signal>triggered()</signal>
+   <receiver>Overview</receiver>
+   <slot>toggleManualQuery()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>67</x>
+     <y>34</y>
     </hint>
     <hint type="destinationlabel">
      <x>211</x>
@@ -157,5 +207,7 @@
  <slots>
   <slot>setApiKey()</slot>
   <slot>toggleMapView()</slot>
+  <slot>toggleInventoryView()</slot>
+  <slot>toggleManualQuery()</slot>
  </slots>
 </ui>

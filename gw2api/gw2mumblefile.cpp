@@ -9,7 +9,9 @@
 
 #include <QDebug>
 #include <QTimer>
-#include <gw2/gw2api.h>
+#include <QJsonDocument>
+
+namespace GW2 {
 
 GW2MumbleFile::GW2MumbleFile(QObject *parent)
     : QObject(parent)
@@ -126,3 +128,5 @@ void GW2MumbleFile::updateData()
     teamColorId = doc["team_color_id"].toInt();
     commander = doc["commander"].toBool();
 }
+
+}; // namespace GW2

@@ -1,86 +1,93 @@
 #include "gw2api.h"
-#include <QSettings>
-#include <QtNetwork/QNetworkRequest>
+
+#include <QNetworkReply>
+#include <QFile>
 #include <QDir>
 #include <QStandardPaths>
-#include <QFile>
-#include <QBitArray>
 
-GW2Api* GW2Api::gApi = nullptr;
+namespace GW2 {
 
-GW2Api::GW2Api(QObject *parent) : QObject(parent)
+GW2Api* GW2Api::_gApi = nullptr;
+
+GW2Api::GW2Api(QString apiKey, QObject* parent)
+    : QObject(parent)
+    , _apiKey(apiKey)
 {
-    Q_ASSERT(gApi == nullptr);
-    gApi = this;
+    Q_ASSERT(_gApi == nullptr);
+
+    _gApi = this;
 }
 
 GW2Api::~GW2Api()
 {
-    Q_ASSERT(gApi == this);
-    gApi = nullptr;
+    Q_ASSERT(_gApi == this);
+    _gApi = nullptr;
 
-    for(auto image: tileCache.values()) {
+    // lots of async stuff, so we this
+    auto copyCache = std::move(tileCache);
+    tileCache.clear();
+
+    for(auto image: copyCache.values()) {
         delete image;
     }
 }
 
-GW2Api *GW2Api::getApi()
+QString GW2Api::apiKey() const
 {
-    return gApi;
+    return _apiKey;
+}
+
+void GW2Api::setApiKey(const QString &apiKey)
+{
+    _apiKey = apiKey;
 }
 
 bool GW2Api::isGameRunning() const
 {
-    return mumbleFile.isRunning();
+    return _mumbleFile.isRunning();
 }
 
 bool GW2Api::isApiAccessable() const
 {
-    return QSettings().value("apikey","").toString() != "";
+    return !_apiKey.isEmpty() && _apiKey != "";
 }
 
 const GW2MumbleFile &GW2Api::getCurrentPlayerData() const
 {
-    return mumbleFile;
+    return _mumbleFile;
 }
 
-QNetworkReply *GW2Api::get(QString endpoint, bool cache)
+void GW2Api::get(QString endpoint, bool cache, GW2Api::GenericCallback callback)
 {
-
+    // construct the url
     QString urlString = QString("https://api.guildwars2.com/v2/")+endpoint;
-    qDebug() << "Fetching " << urlString << "; Into Cache: " << cache;
+    qDebug() << "Fetching " << urlString << "; Into/From Cache: " << cache;
     QUrl url = QUrl(urlString);
+    // check against cache
+    if (cache && callback && _requestCache.contains(urlString)) {
+        qDebug() << ">>>> Was from Cache!";
+        callback(_requestCache[urlString]);
+        return;
+    }
+
+    // construct request
     QNetworkRequest request(url);
-    QString key = QSettings().value("apikey", "").toString();
-    request.setRawHeader("Authorization", (QString("Bearer ") + key).toUtf8());
-    QNetworkReply* reply = networkManager.get(request);
-    if (cache) {
-        connect(reply,&QNetworkReply::finished,[this,reply,urlString]() {
-           requestCache[urlString] = reply->peek(reply->size());
-        });
-    }
+    request.setRawHeader("Authorization", (QString("Bearer ") + _apiKey).toUtf8());
+    QNetworkReply* reply = _networkManager.get(request);
 
-    return reply;
-}
+    // handle reply
+    connect(reply,&QNetworkReply::finished, [=](){
+        auto data = reply->readAll();
+        if (cache) {
+            _requestCache[urlString] = data;
+        }
+        if (callback) {
+            callback(data);
+        }
 
-QByteArray GW2Api::getCached(QString endpoint)
-{
-    QString urlString = QString("https://api.guildwars2.com/v2/")+endpoint;
-    if (requestCache.contains(urlString)) {
-        return requestCache[urlString];
-    }
-    else {
-        (void)get(endpoint,true);
-    }
-
-    return QByteArray();
-}
-
-QNetworkReply *GW2Api::getV1(QString endpoint)
-{
-    QUrl url = QUrl(QString("https://api.guildwars2.com/v1/")+endpoint);
-    QNetworkRequest request(url);
-    return networkManager.get(request);
+        // cleanup is important
+        reply->deleteLater();
+    });
 }
 
 void GW2Api::cacheTile(int continent, int floor, int zoom, int x, int y)
@@ -116,7 +123,7 @@ void GW2Api::cacheTile(int continent, int floor, int zoom, int x, int y)
     QString key = QSettings().value("apikey", "").toString();
     request.setRawHeader("Authorization", (QString("Bearer ") + key).toUtf8());
 
-    auto result = networkManager.get(request);
+    auto result = _networkManager.get(request);
     result->connect(result,&QNetworkReply::finished, [=]() {
         QFile cacheFile(cacheFileName);
         cacheFile.open(QIODevice::WriteOnly);
@@ -169,14 +176,12 @@ QImage *GW2Api::iconCached(QString name)
         tmp.open(QIODevice::WriteOnly);
         tmp.close();
 
-        auto reply = get(QString("files?ids=%1").arg(name));
-        connect(reply,&QNetworkReply::finished,[this,reply,cacheFileName](){
-            reply->deleteLater();
-            auto iconInfo = QJsonDocument::fromJson(reply->readAll());
+        get(QString("files?ids=%1").arg(name),true,[=](QByteArray data){;
+            auto iconInfo = QJsonDocument::fromJson(data);
             qDebug() << iconInfo[0]["icon"].toString();
             QUrl iconUrl(iconInfo[0]["icon"].toString());
             QNetworkRequest request(iconUrl);
-            auto iconReply = networkManager.get(request);
+            auto iconReply = _networkManager.get(request);
             connect(iconReply,&QNetworkReply::finished,[cacheFileName,iconReply](){
                 iconReply->deleteLater();
                 QFile cacheFile(cacheFileName);
@@ -221,7 +226,7 @@ QImage *GW2Api::resourceCached(QString url)
         tmp.close();
         QUrl requestUrl(url);
         QNetworkRequest request(requestUrl);
-        auto resourceReply = networkManager.get(request);
+        auto resourceReply = _networkManager.get(request);
         connect(resourceReply,&QNetworkReply::finished,[cacheFileName,resourceReply](){
             resourceReply->deleteLater();
             QFile cacheFile(cacheFileName);
@@ -241,3 +246,10 @@ QImage *GW2Api::resourceCached(QString url)
 
     return nullptr;
 }
+
+GW2Api *GW2Api::getApi()
+{
+    return _gApi;
+}
+
+}; //namespace GW2
