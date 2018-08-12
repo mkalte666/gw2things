@@ -121,7 +121,7 @@ ManualQuery::ManualQuery(QWidget *parent) : QWidget(parent)
     connect(query,&QLineEdit::returnPressed, button, &QPushButton::click);
     connect(button,&QPushButton::pressed,[=]()
     {
-        (void)GW2::GW2Api::getApi()->get(query->text(),false,[=](QByteArray data) {
+        (void)GW2::Api::getApi()->get(query->text(),false,[=](QByteArray data) {
             result->setText(QString::fromUtf8(data));
             cppResult->setText(generateClasses(data));
         });

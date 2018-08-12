@@ -30,8 +30,7 @@ SOURCES += \
     mapview.cpp \
     inventoryview.cpp \
     gw2/characters/gw2characters.cpp \
-    manualquery.cpp \
-    gw2/characters/gw2character.cpp
+    manualquery.cpp
 
 HEADERS += \
         overview.h \
@@ -40,7 +39,6 @@ HEADERS += \
     inventoryview.h \
     gw2/characters/gw2characters.h \
     manualquery.h \
-    gw2/characters/gw2character.h \
     gw2/gw2currentplayer.h
 
 FORMS += \

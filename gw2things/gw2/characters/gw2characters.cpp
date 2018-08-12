@@ -42,7 +42,7 @@ QVariant GW2Characters::data(const QModelIndex &index, int role) const
 
 void GW2Characters::updateData()
 {
-    GW2::GW2Api::getApi()->get("characters",false,[=](QByteArray data) {
+    GW2::Api::getApi()->get("characters",false,[=](QByteArray data) {
        auto json = QJsonDocument::fromJson(data);
        if(json.isArray()) {
            characterNames.clear();

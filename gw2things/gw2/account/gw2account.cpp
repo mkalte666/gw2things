@@ -127,7 +127,7 @@ int GW2Account::getWvwRank() const
 
 void GW2Account::updateData()
 {
-    GW2::GW2Api::getApi()->get("account",false,[=](QByteArray result){
+    GW2::Api::getApi()->get("account",false,[=](QByteArray result){
         auto document = QJsonDocument::fromJson(result);
         id = document["id"].toString();
         name = document["name"].toString();

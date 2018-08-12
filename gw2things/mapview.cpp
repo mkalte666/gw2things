@@ -83,7 +83,7 @@ void MapView::paintEvent(QPaintEvent *event)
 {
     (void)event; // not using this atm
     QPainter painter(this);
-    auto api = GW2::GW2Api::getApi();
+    auto api = GW2::Api::getApi();
 
     for (auto t: visibleTiles) {
         auto p = worldToPixel(size(),center,t.zoom,t.getTopLeft());
@@ -134,16 +134,16 @@ void MapView::updateData()
             tile.x = static_cast<int>(floor(worldCoord.x()*powf(2.f,zoom)/32768.0f));
             tile.y = static_cast<int>(floor(worldCoord.y()*powf(2.f,zoom)/32768.0f));
             if (tile.x >= 0 && tile.x < pow(2,zoom) && tile.y >= 0 && tile.y <= pow(2,zoom)) {
-                GW2::GW2Api::getApi()->cacheTile(1,1,zoom,tile.x,tile.y);
+                GW2::Api::getApi()->cacheTile(1,1,zoom,tile.x,tile.y);
                 visibleTiles.push_back(tile);
             }
         }
     }
 
     // reocurring tasks, more or less. fetch map, then fetch pois about map, populate pois array, etc.
-    if (GW2::GW2Api::getApi()->isGameRunning()) {
-        QString endpoint = QString("maps/%1").arg(GW2::GW2Api::getApi()->getCurrentPlayerData().getMapId());
-        GW2::GW2Api::getApi()->get(endpoint,true,[=](QByteArray mapDataArray){
+    if (GW2::Api::getApi()->isGameRunning()) {
+        QString endpoint = QString("maps/%1").arg(GW2::Api::getApi()->getCurrentPlayerData().getMapId());
+        GW2::Api::getApi()->get(endpoint,true,[=](QByteArray mapDataArray){
             if (!mapDataArray.isEmpty()) {
                 auto mapData = QJsonDocument::fromJson(mapDataArray);
                 continentRect.setLeft(mapData["continent_rect"][0][0].toDouble());
@@ -165,8 +165,8 @@ void MapView::updateData()
                         .arg(continent)
                         .arg(nFloor)
                         .arg(region)
-                        .arg(GW2::GW2Api::getApi()->getCurrentPlayerData().getMapId());
-                GW2::GW2Api::getApi()->get(poisEndpoint,true,[=](QByteArray poiDataArray) {
+                        .arg(GW2::Api::getApi()->getCurrentPlayerData().getMapId());
+                GW2::Api::getApi()->get(poisEndpoint,true,[=](QByteArray poiDataArray) {
                     if (!poiDataArray.isEmpty()) {
                         auto poiData = QJsonDocument::fromJson(poiDataArray);
                         visibleIcons.clear();
@@ -208,9 +208,9 @@ void MapView::updateData()
 
 void MapView::updateMovement()
 {
-    if (moved && GW2::GW2Api::getApi()->isGameRunning()) {
+    if (moved && GW2::Api::getApi()->isGameRunning()) {
         // update map center over here
-        auto pos = GW2::GW2Api::getApi()->getCurrentPlayerData().getPos();
+        auto pos = GW2::Api::getApi()->getCurrentPlayerData().getPos();
         center = mapToWorld(mapRect,continentRect,QVector2D(pos.x(),pos.z()));
         update();
     }

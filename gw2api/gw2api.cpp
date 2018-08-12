@@ -7,9 +7,9 @@
 
 namespace GW2 {
 
-GW2Api* GW2Api::_gApi = nullptr;
+Api* Api::_gApi = nullptr;
 
-GW2Api::GW2Api(QString apiKey, QObject* parent)
+Api::Api(QString apiKey, QObject* parent)
     : QObject(parent)
     , _apiKey(apiKey)
 {
@@ -18,7 +18,7 @@ GW2Api::GW2Api(QString apiKey, QObject* parent)
     _gApi = this;
 }
 
-GW2Api::~GW2Api()
+Api::~Api()
 {
     Q_ASSERT(_gApi == this);
     _gApi = nullptr;
@@ -32,32 +32,32 @@ GW2Api::~GW2Api()
     }
 }
 
-QString GW2Api::apiKey() const
+QString Api::apiKey() const
 {
     return _apiKey;
 }
 
-void GW2Api::setApiKey(const QString &apiKey)
+void Api::setApiKey(const QString &apiKey)
 {
     _apiKey = apiKey;
 }
 
-bool GW2Api::isGameRunning() const
+bool Api::isGameRunning() const
 {
     return _mumbleFile.isRunning();
 }
 
-bool GW2Api::isApiAccessable() const
+bool Api::isApiAccessable() const
 {
     return !_apiKey.isEmpty() && _apiKey != "";
 }
 
-const GW2MumbleFile &GW2Api::getCurrentPlayerData() const
+const MumbleFile &Api::getCurrentPlayerData() const
 {
     return _mumbleFile;
 }
 
-void GW2Api::get(QString endpoint, bool cache, GW2Api::GenericCallback callback)
+void Api::get(QString endpoint, bool cache, Api::GenericCallback callback)
 {
     // construct the url
     QString urlString = QString("https://api.guildwars2.com/v2/")+endpoint;
@@ -90,7 +90,7 @@ void GW2Api::get(QString endpoint, bool cache, GW2Api::GenericCallback callback)
     });
 }
 
-void GW2Api::cacheTile(int continent, int floor, int zoom, int x, int y)
+void Api::cacheTile(int continent, int floor, int zoom, int x, int y)
 {
     // check if file exsists
     QString identifier = QString("%1-%2-%3-%4-%5.jpg");
@@ -132,7 +132,7 @@ void GW2Api::cacheTile(int continent, int floor, int zoom, int x, int y)
     });
 }
 
-QImage *GW2Api::getCachedTile(int continent, int floor, int zoom, int x, int y)
+QImage *Api::getCachedTile(int continent, int floor, int zoom, int x, int y)
 {
     QString identifier = QString("%1-%2-%3-%4-%5.jpg");
     identifier = identifier.arg(continent).arg(floor).arg(zoom).arg(x).arg(y);
@@ -158,7 +158,7 @@ QImage *GW2Api::getCachedTile(int continent, int floor, int zoom, int x, int y)
     return nullptr;
 }
 
-QImage *GW2Api::iconCached(QString name)
+QImage *Api::iconCached(QString name)
 {
     if (tileCache.contains(name)) {
         return tileCache[name];
@@ -203,7 +203,7 @@ QImage *GW2Api::iconCached(QString name)
     return nullptr;
 }
 
-QImage *GW2Api::resourceCached(QString url)
+QImage *Api::resourceCached(QString url)
 {
     if (tileCache.contains(url)) {
         return tileCache[url];
@@ -247,7 +247,42 @@ QImage *GW2Api::resourceCached(QString url)
     return nullptr;
 }
 
-GW2Api *GW2Api::getApi()
+void Api::getAccount(Account::Callback callback)
+{
+    if (callback) {
+        get("account", false, [callback](QByteArray data){
+            auto json = QJsonDocument::fromJson(data).object();
+            Account a(json);
+            callback(a);
+        });
+    }
+}
+
+void Api::getCharacter(QString name, Character::Callback callback)
+{
+    if (callback) {
+        auto endpoint = QString("characters/%1").arg(name);
+        get(endpoint, false, [callback](QByteArray data){
+            auto json = QJsonDocument::fromJson(data).object();
+            Character c(json);
+            callback(c);
+        });
+    }
+}
+
+void Api::getCharacters(Character::Callback callback)
+{
+    if (callback) {
+        get("characters", false, [this,callback](QByteArray data){
+            auto json = QJsonDocument::fromJson(data).array();
+            for (auto characterName : json) {
+                getCharacter(characterName.toString(), callback);
+            }
+        });
+    }
+}
+
+Api *Api::getApi()
 {
     return _gApi;
 }

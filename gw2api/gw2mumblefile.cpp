@@ -13,7 +13,7 @@
 
 namespace GW2 {
 
-GW2MumbleFile::GW2MumbleFile(QObject *parent)
+MumbleFile::MumbleFile(QObject *parent)
     : QObject(parent)
     , valid(false)
     , lm(nullptr)
@@ -52,68 +52,68 @@ GW2MumbleFile::GW2MumbleFile(QObject *parent)
 #endif
 
     QTimer *timer = new QTimer(this);
-    connect(timer, &QTimer::timeout, this, &GW2MumbleFile::updateData);
+    connect(timer, &QTimer::timeout, this, &MumbleFile::updateData);
     timer->start(1000); // ever minute should be enought
 }
 
-GW2MumbleFile::~GW2MumbleFile()
+MumbleFile::~MumbleFile()
 {
 
 }
 
-bool GW2MumbleFile::isValid() const
+bool MumbleFile::isValid() const
 {
     return valid;
 }
 
-bool GW2MumbleFile::isRunning() const
+bool MumbleFile::isRunning() const
 {
     return isValid() && QString::fromWCharArray(lm->name) == "Guild Wars 2";
 }
 
-QVector3D GW2MumbleFile::getPos() const
+QVector3D MumbleFile::getPos() const
 {
     return QVector3D(lm->fAvatarPosition[0]*39.3701f,
             lm->fAvatarPosition[1]*39.3701f,
             lm->fAvatarPosition[2]*39.3701f);
 }
 
-QString GW2MumbleFile::getName() const
+QString MumbleFile::getName() const
 {
     return name;
 }
 
-int GW2MumbleFile::getProfession() const
+int MumbleFile::getProfession() const
 {
     return profession;
 }
 
-int GW2MumbleFile::getRace() const
+int MumbleFile::getRace() const
 {
     return race;
 }
 
-int GW2MumbleFile::getMapId() const
+int MumbleFile::getMapId() const
 {
     return mapId;
 }
 
-int GW2MumbleFile::getWorldId() const
+int MumbleFile::getWorldId() const
 {
     return worldId;
 }
 
-int GW2MumbleFile::getTeamColorId() const
+int MumbleFile::getTeamColorId() const
 {
     return teamColorId;
 }
 
-bool GW2MumbleFile::getCommander() const
+bool MumbleFile::getCommander() const
 {
     return commander;
 }
 
-void GW2MumbleFile::updateData()
+void MumbleFile::updateData()
 {
     if (!isValid()) {
         return;

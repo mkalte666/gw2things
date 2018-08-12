@@ -1,5 +1,5 @@
-#ifndef GW2ACCOUNT_H
-#define GW2ACCOUNT_H
+#ifndef GW2ACCOUNT_H_F
+#define GW2ACCOUNT_H_F
 
 #include <QAbstractTableModel>
 #include <QDateTime>
@@ -56,4 +56,4 @@ private:
     int wvwRank;
 };
 
-#endif // GW2ACCOUNT_H
+#endif // GW2ACCOUNT_H_F

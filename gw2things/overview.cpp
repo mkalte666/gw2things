@@ -5,7 +5,7 @@
 #include <QSettings>
 #include <QTimer>
 
-#include <gw2/account/gw2account.h>
+#include "gw2/account/gw2account.h"
 #include <gw2/gw2currentplayer.h>
 
 Overview::Overview(QWidget *parent) :

@@ -24,11 +24,16 @@ DEFINES += QT_DEPRECATED_WARNINGS
 
 SOURCES += \
         gw2api.cpp \
-        gw2mumblefile.cpp
+        gw2mumblefile.cpp \
+    gw2account.cpp \
+    gw2character.cpp
 
 HEADERS += \
         gw2api.h \
-    gw2mumblefile.h
+    gw2mumblefile.h \
+    gw2account.h \
+    gw2common.h \
+    gw2character.h
 unix {
     target.path = /usr/lib
     INSTALLS += target

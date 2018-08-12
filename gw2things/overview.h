@@ -27,7 +27,7 @@ public slots:
     void toggleManualQuery();
 private:
     Ui::Overview *ui;
-    GW2::GW2Api api;
+    GW2::Api api;
     MapView* mapview;
     InventoryView* inventoryview;
     ManualQuery* manualquery;

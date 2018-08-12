@@ -6,13 +6,15 @@
 #include <QString>
 #include <QNetworkAccessManager>
 #include <QImage>
-#include <QJsonDocument>
-#include <QJsonObject>
-#include <QJsonArray>
-#include <QJsonValue>
 
+#include "gw2common.h"
 #include "gw2mumblefile.h"
+#include "gw2account.h"
+#include "gw2character.h"
 
+/**
+ * Holds are GW2 Api classes
+ */
 namespace GW2 {
 
 class Api : public QObject
@@ -60,7 +62,7 @@ public:
      * @brief getCurrentPlayerData
      * @return the connection to the currently running game
      */
-    const GW2MumbleFile& getCurrentPlayerData() const;
+    const MumbleFile& getCurrentPlayerData() const;
 
     /**
      * @brief get - make a (authorized) request against the v2 api
@@ -104,6 +106,10 @@ public:
      */
     QImage* resourceCached(QString url);
 
+    void getAccount(Account::Callback callback);
+
+    void getCharacter(QString name, Character::Callback callback);
+    void getCharacters(Character::Callback callback);
     /**
      * @brief gets the api singleton
      * @return pointer to the api
@@ -113,7 +119,7 @@ public:
 private:
     static Api* _gApi;
     QString _apiKey; /// api key
-    GW2MumbleFile _mumbleFile; ///< mumble file connection
+    MumbleFile _mumbleFile; ///< mumble file connection
 
     QNetworkAccessManager _networkManager; ///< network manager used by this classes requests
     QMap<QString,QImage*> tileCache; ///< caches all the images
