@@ -194,6 +194,8 @@ struct InventorySlot {
     std::vector<std::shared_ptr<ItemData>> infusions;
     void fetchFullData();
     void draw();
+
+    static void bulkFetch(std::vector < std::shared_ptr < InventorySlot>> &slots);
 };
 json_helper(InventorySlot);
 

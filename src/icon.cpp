@@ -5,6 +5,7 @@
 #include <SDL_image.h>
 #include <imgui.h>
 #include <nlohmann/json.hpp>
+#include "workpool.h"
 
 using nlohmann::json;
 
@@ -122,16 +123,23 @@ void Icon::_fetch()
             glDeleteTextures(1, &glTex);
             glTex = GL_INVALID_VALUE;
         }
-        auto surface = IMG_LoadTyped_RW(SDL_RWFromMem((void*)data.data(), static_cast<int>(data.size())), 1, "PNG");
-        if (surface) {
-            // common
-            srcrect = { 0, 0, surface->w, surface->h };
+        surface = nullptr;
+        Workpool::instance.addTask([this,data]() { 
+            surface = IMG_LoadTyped_RW(SDL_RWFromMem((void*)data.data(), static_cast<int>(data.size())), 1, "PNG");
+            },
+        [this]{
+            if (surface) {
+                // common
+                srcrect = { 0, 0, surface->w, surface->h };
 
-            // texture for sdl and imgui
-            tex = SDL_CreateTextureFromSurface(Env::mainRenderer, surface);
-            glTex = SurfaceToTexture(surface);
-            SDL_FreeSurface(surface);
-        }
+                // texture for sdl and imgui
+                tex = SDL_CreateTextureFromSurface(Env::mainRenderer, surface);
+                glTex = SurfaceToTexture(surface);
+                SDL_FreeSurface(surface);
+                surface = nullptr;
+            }
+            });
+        
     },
         0LL);
 }

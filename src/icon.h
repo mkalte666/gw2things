@@ -20,6 +20,7 @@ public:
     std::string url;
 
 private:
+    SDL_Surface* surface;
     SDL_Texture* tex = nullptr;
     GLuint glTex = GL_INVALID_VALUE;
     void makeUrlFromFileResource(std::string name);

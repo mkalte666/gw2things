@@ -81,6 +81,7 @@ void jsonProcessor(T* target, const std::vector<char>& data)
     // refetch if we get slapped
     if (j.is_object() && j.value("text", std::string()) == "too many requests") {
         target->maxCacheAge = -1; // enforce fetch
+        Fetcher::fetcher.forceDelay();
         target->fetch();
         return;
     }
@@ -405,8 +406,37 @@ void InventorySlot::draw()
         ImGui::Text("Description");
         ImGui::TextWrapped("%s", item->description.c_str());
         ImGui::EndGroup();
+    }
+}
 
-        
+void InventorySlot::bulkFetch(std::vector<std::shared_ptr<InventorySlot>>& slots)
+{
+    // upgrades are ignore for now. FIXME
+    for (int i = 0; i < slots.size(); i++) {
+        std::string bulkEndpoint = "https://api.guildwars2.com/v2/items?ids=";
+        for (int j = 0; j < 100 && i < slots.size(); j++, i++) {
+            bulkEndpoint += std::to_string(slots[i]->itemId) + ",";
+        }
+
+        Fetcher::fetcher.fetch(bulkEndpoint, [slots](const std::vector<char>& data) {
+            json j = json::parse(data);
+            // refetch if we get slapped
+            if (j.is_object() && j.value("text", std::string()) == "too many requests") {
+                // unfortunate
+                return;
+            }
+            std::vector<json> values;
+            for (auto item : j.get<std::vector<std::shared_ptr<ItemData>>>()) {
+                auto it = std::find_if(slots.begin(), slots.end(), [item](auto& slot) {
+                    return slot->itemId == item->id;
+                });
+                if (it != slots.end()) {
+                    (*it)->item = item;
+                }
+                item->onFetchComplete();
+            }
+        },
+            60 * 60 * 24);
     }
 }
 
@@ -448,6 +478,10 @@ void BankData::show()
     if (ImGui::Button("Clear")) {
         searchFilter.clear();
     }
+    ImGui::SameLine();
+    if (ImGui::Button("Reload")) {
+        fetch();
+    }
 
     ImGui::BeginChild("Scrolling");
     for (auto& slot : slots) {
@@ -458,6 +492,7 @@ void BankData::show()
             }
 
             slot->draw();
+            ImGui::Separator();
         }
     }
     ImGui::EndChild();
@@ -522,9 +557,7 @@ void MaterialStorageData::fetch()
 void MaterialStorageData::onFetchComplete()
 {
     if (!disableFullFetch) {
-        for (auto& slot : slots) {
-            slot->fetchFullData();
-        }
+        InventorySlot::bulkFetch(slots);
     }
 }
 
@@ -550,6 +583,7 @@ void MaterialStorageData::show()
             }
 
             slot->draw();
+            ImGui::Separator();
         }
     }
     ImGui::EndChild();

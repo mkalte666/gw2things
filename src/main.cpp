@@ -31,6 +31,7 @@
 #include <iostream>
 #include "window.h"
 #include "env.h"
+#include "workpool.h"
 
 int main(int argc, char* argv[])
 {
@@ -54,6 +55,7 @@ int main(int argc, char* argv[])
 
     // we are runnable. put in own scope so we run some destructors of stack objects before everything explodes
     {
+        Workpool::init(3);
         // GL 3.3 + GLSL 130
         const char* glsl_version = "#version 330";
         SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, 0);
@@ -111,7 +113,7 @@ int main(int argc, char* argv[])
         uint64_t now = SDL_GetPerformanceCounter();
         uint64_t last = 0;
         while (running) {
-
+            Workpool::instance.tick();
             // event polling is here
             SDL_Event e;
             while (SDL_PollEvent(&e)) {

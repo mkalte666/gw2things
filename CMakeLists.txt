@@ -109,7 +109,9 @@ set(ALL_SOURCES
     src/mumblefile.cpp
     src/mumblefile.h
     src/window.cpp
-    src/window.h)
+    src/window.h
+    src/workpool.cpp
+    src/workpool.h)
 
 # more the usual. create executable, add libraries
 add_executable(${_target_name} ${ALL_SOURCES})

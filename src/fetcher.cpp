@@ -31,6 +31,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <time.h>
+#include <chrono>
 
 // singleton instance
 Fetcher Fetcher::fetcher;
@@ -54,21 +55,156 @@ std::string makeId(const std::string& in)
     return std::to_string(hash);
 }
 
-Fetcher::Fetcher()
-{
-    curl_global_init(CURL_GLOBAL_DEFAULT);
-}
-
-Fetcher::~Fetcher()
-{
-    curl_global_cleanup();
-}
-
 size_t writefunc(char* ptr, size_t, size_t nmemb, void* userdata)
 {
     auto data = static_cast<std::vector<char>*>(userdata);
     data->insert(data->end(), ptr, ptr + nmemb);
     return nmemb;
+}
+
+void Fetcher::fetchWorker()
+{
+    CURL* curl = curl_easy_init();
+    while (running) {
+        using namespace std::chrono;
+        std::this_thread::sleep_for(10ms);
+        if (paused) {
+            using namespace std::chrono;
+            std::this_thread::sleep_for(5000ms);
+            paused = false;
+            continue;
+        }
+        FetchInfo info;
+        {
+            std::unique_lock<std::mutex> lock(scheduleMutex);
+            if (scheduledFetches.empty()) {
+                continue;
+            }
+            info = std::move(scheduledFetches.front());
+            scheduledFetches.pop();
+        }
+        singleFetch(info, curl);
+        {
+            std::unique_lock<std::mutex> lock(completeMutex);
+            completeFetches.push(std::move(info));
+        }
+    }
+    curl_easy_cleanup(curl);
+}
+
+int Fetcher::singleFetch(FetchInfo& fetch, void* curlPtr)
+{
+    // ============
+    // REAAAD THE COMMENTS, YOU WHO DARES TO GO HERE
+    // ============
+    // this will attempt to load the date, either from the filesystem or from the cache
+    // try to not scare it
+    if (fetch.maxAge >= 0) {
+        std::string filename = Env::makeCacheFilepath(makeId(fetch.url));
+        std::ifstream file(filename, std::ios::in | std::ios::binary | std::ios::ate);
+
+        // are we already cached?
+        if (file.good()) {
+            // stat the file and calculate its age
+            struct stat statRes;
+            (void)stat(filename.c_str(), &statRes);
+            time_t age = time(nullptr) - statRes.st_mtime;
+
+            // can we use the data?
+            if (fetch.maxAge == 0 || age < fetch.maxAge) {
+                SDL_Log("Doing a cache read for %s (%s)", fetch.url.c_str(), filename.c_str());
+                std::streamsize filesize = file.tellg(); // we opend with ios::ate
+                file.seekg(0, std::ios::beg);
+                fetch.data.resize(filesize);
+                file.read(fetch.data.data(), filesize);
+
+                // we done
+                fetch.success = true;
+                fetch.complete = true;
+                return 0;
+            } else {
+                SDL_Log("Cache expired for %s", fetch.url.c_str());
+            }
+        } else {
+            SDL_Log("No cache available for %s", fetch.url.c_str());
+        }
+    }
+
+    // we need to do a fetch (for whatever reason). now follows a bit of curl
+    CURL* curl;
+    curl = (CURL*)curlPtr;
+    // plug the api key into from the api
+    std::string header = "Authorization: Bearer ";
+    header += Env::getApiKey();
+    curl_slist* slist = nullptr;
+    slist = curl_slist_append(slist, header.c_str());
+    // check if the string list is ok beause we fuck up completly if it isnt
+    if (slist == nullptr) {
+        SDL_Log("Something is terribly wrong with curl");
+        curl_easy_cleanup(curl);
+
+        // so that this one is clean out of the list
+        fetch.complete = true;
+        return -1;
+    }
+
+    // set the stuff up
+    curl_easy_setopt(curl, CURLOPT_URL, fetch.url.c_str());
+    curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, writefunc);
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA, &fetch.data);
+    curl_easy_setopt(curl, CURLOPT_HTTPHEADER, slist);
+
+    // actual fetch is here. this takes an arbitrary amout of time.
+    // thats why we are in a thread btw.
+    CURLcode res = curl_easy_perform(curl);
+
+    // race condition: set complete only after we are done (before return) (down down)
+    if (res == CURLE_OK) {
+        fetch.success = true;
+    } else {
+        SDL_Log("CURL ERROR: %s", curl_easy_strerror(res));
+    }
+
+    curl_slist_free_all(slist);
+    
+
+    //ok, so we did a fetch and data is populated.
+    // do we need to write this to the cache?
+    if (fetch.maxAge >= 0) {
+        std::string filename = Env::makeCacheFilepath(makeId(fetch.url));
+        SDL_Log("Updating Cache for %s (%s))", fetch.url.c_str(), filename.c_str());
+
+        std::ofstream outfile(filename, std::ios::out | std::ios::trunc | std::ios::binary);
+        if (outfile.good()) {
+            outfile.write(fetch.data.data(), fetch.data.size());
+            outfile.close();
+        }
+    }
+
+    // done with writing to the file
+    // and also done if we dont. NOW we can set the complete flag
+    fetch.complete = true;
+    return 0;
+}
+
+Fetcher::Fetcher()
+{
+    curl_global_init(CURL_GLOBAL_DEFAULT);
+    running = true;
+    for (int i = 0; i < MAX_FETCHES; i++) {
+        workers[i] = std::thread(std::bind(&Fetcher::fetchWorker,this));
+    }
+}
+
+Fetcher::~Fetcher()
+{
+    running = false;
+    for (int i = 0; i < MAX_FETCHES; i++) {
+        workers[i].join();
+    }
+
+    curl_global_cleanup();    
 }
 
 size_t Fetcher::fetch(std::string url, FetcherCallback callback, time_t maxAge)
@@ -80,155 +216,49 @@ size_t Fetcher::fetch(std::string url, FetcherCallback callback, time_t maxAge)
     numFetches++;
     info.fetchId = numFetches;
 
-    // we have a connection limit. dont over do it
-    if (fetches.size() >= MAX_FETCHES) {
-        scheduledFetches.push_back(info);
-        return info.fetchId;
-    }
-
     return fetch(info);
 }
+
 size_t Fetcher::fetch(FetchInfo& info)
 {
-    auto infoIter = fetches.insert(fetches.end(), info);
-
-    // ============
-    // REAAAD THE COMMENTS, YOU WHO DARES TO GO HERE
-    // ============
-    // this thread will attempt to load the date, either from the filesystem or from the cache
-    // try to not scare it
-    std::thread([infoIter]() {
-        // see if we have to do a fetch
-        if (infoIter->maxAge >= 0) {
-            std::string filename = Env::makeCacheFilepath(makeId(infoIter->url));
-            std::ifstream file(filename, std::ios::in | std::ios::binary | std::ios::ate);
-
-            // are we already cached?
-            if (file.good()) {
-                // stat the file and calculate its age
-                struct stat statRes;
-                (void)stat(filename.c_str(), &statRes);
-                time_t age = time(nullptr) - statRes.st_mtime;
-
-                // can we use the data?
-                if (infoIter->maxAge == 0 || age < infoIter->maxAge) {
-                    SDL_Log("Doing a cache read for %s (%s)", infoIter->url.c_str(), filename.c_str());
-                    std::streamsize filesize = file.tellg(); // we opend with ios::ate
-                    file.seekg(0, std::ios::beg);
-                    infoIter->data.resize(filesize);
-                    file.read(infoIter->data.data(), filesize);
-
-                    // we done
-                    infoIter->success = true;
-                    infoIter->complete = true;
-                    return 0;
-                } else {
-                    SDL_Log("Cache expired for %s", infoIter->url.c_str());
-                }
-            } else {
-                SDL_Log("No cache available for %s", infoIter->url.c_str());
-            }
-        }
-
-        // we need to do a fetch (for whatever reason). now follows a bit of curl
-        CURL* curl;
-        curl = curl_easy_init();
-        // plug the api key into from the api
-        std::string header = "Authorization: Bearer ";
-        header += Env::getApiKey();
-        curl_slist* slist = nullptr;
-        slist = curl_slist_append(slist, header.c_str());
-        // check if the string list is ok beause we fuck up completly if it isnt
-        if (slist == nullptr) {
-            SDL_Log("Something is terribly wrong with curl");
-            curl_easy_cleanup(curl);
-
-            // so that this one is clean out of the list
-            infoIter->complete = true;
-            return -1;
-        }
-
-        // set the stuff up
-        curl_easy_setopt(curl, CURLOPT_URL, infoIter->url.c_str());
-        curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
-        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, writefunc);
-        curl_easy_setopt(curl, CURLOPT_WRITEDATA, &infoIter->data);
-        curl_easy_setopt(curl, CURLOPT_HTTPHEADER, slist);
-
-        // actual fetch is here. this takes an arbitrary amout of time.
-        // thats why we are in a thread btw.
-        CURLcode res = curl_easy_perform(curl);
-
-        // race condition: set complete only after we are done (before return) (down down)
-        if (res == CURLE_OK) {
-            infoIter->success = true;
-        } else {
-            SDL_Log("CURL ERROR: %s", curl_easy_strerror(res));
-        }
-
-        curl_slist_free_all(slist);
-        curl_easy_cleanup(curl);
-
-        //ok, so we did a fetch and data is populated.
-        // do we need to write this to the cache?
-        if (infoIter->maxAge >= 0) {
-            std::string filename = Env::makeCacheFilepath(makeId(infoIter->url));
-            SDL_Log("Updating Cache for %s (%s))", infoIter->url.c_str(), filename.c_str());
-
-            std::ofstream outfile(filename, std::ios::out | std::ios::trunc | std::ios::binary);
-            if (outfile.good()) {
-                outfile.write(infoIter->data.data(), infoIter->data.size());
-                outfile.close();
-            }
-        }
-
-        // done with writing to the file
-        // and also done if we dont. NOW we can set the complete flag
-        infoIter->complete = true;
-        return 0;
-    })
-        .detach();
+    std::unique_lock<std::mutex> lock(scheduleMutex);
+    scheduledFetches.push(info);
 
     return info.fetchId;
 }
 
 void Fetcher::drop(size_t fetchId)
 {
-    for (auto& f : scheduledFetches) {
-        if (f.fetchId != fetchId) {
-            continue;
-        }
-        f.callback = nullptr;
-    }
-    for (auto& f : fetches) {
-        if (f.fetchId != fetchId) {
-            continue;
-        }
-        f.callback = nullptr;
-    }
+    droppedIDs.push_back(fetchId);
 }
 
 void Fetcher::tick()
 {
-    auto i = fetches.begin();
-    while (i != fetches.end()) {
-        auto last = i++;
-        if (last->complete) {
-            if (last->success && last->callback) {
-                last->callback(last->data);
+    FetchInfo fetch;
+    {
+        std::unique_lock<std::mutex> lock(completeMutex);
+        if(!completeFetches.empty()) {
+            auto& info = completeFetches.front();
+            auto dropIter = std::find(droppedIDs.begin(), droppedIDs.end(), info.fetchId);
+            if (dropIter == droppedIDs.end()) {
+                fetch = std::move(info);
             } else {
-                SDL_Log("Could not fetch %s", last->url.c_str());
+                droppedIDs.erase(dropIter);
             }
-            fetches.erase(last);
+            completeFetches.pop();
         }
     }
+    
+    if (fetch.callback) {
+        if (fetch.success && fetch.callback) {
+            fetch.callback(fetch.data);
+        } else {
+            SDL_Log("Fetcher: Could not fetch %s", fetch.url.c_str());
+        }
+    }
+}
 
-    // check if we have pending fetches
-    if (fetches.size() < MAX_FETCHES && scheduledFetches.size() > 0) {
-        while (fetches.size() < MAX_FETCHES && scheduledFetches.size() > 0) {
-            auto infoIter = scheduledFetches.begin();
-            fetch(*infoIter);
-            scheduledFetches.erase(infoIter);
-        }
-    }
+void Fetcher::forceDelay()
+{
+    paused = true;
 }

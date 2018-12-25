@@ -18,10 +18,11 @@
 #ifndef _fetcher_h
 #define _fetcher_h
 
-#include <string>
 #include <functional>
+#include <queue>
+#include <string>
 #include <vector>
-#include <list>
+#include <mutex>
 
 class Fetcher {
 public:
@@ -34,13 +35,13 @@ public:
     void drop(size_t fetchId);
 
     void tick();
+    void forceDelay();
 
     static Fetcher fetcher;
 
 private:
     Fetcher();
     ~Fetcher();
-    
 
     struct FetchInfo {
         size_t fetchId = 0;
@@ -49,15 +50,26 @@ private:
         bool success = false;
         std::string url = "";
         FetcherCallback callback = nullptr;
-        // max age < 0 means no caching, maxAge == 0 means alway from cache, 
+        // max age < 0 means no caching, maxAge == 0 means alway from cache,
         // other numbers specify the time after wich the cache expires
         time_t maxAge = CACHE_DEFAULT_MAXAGE;
     };
     size_t fetch(FetchInfo& info);
+    
+    std::mutex completeMutex;
+    std::queue<FetchInfo> completeFetches;
+    std::mutex scheduleMutex;
+    std::queue<FetchInfo> scheduledFetches;
+    std::vector<size_t> droppedIDs;
 
-    std::list<FetchInfo> fetches;
-    std::list<FetchInfo> scheduledFetches;
     size_t numFetches = 0;
+
+    void fetchWorker();
+    volatile bool running;
+    volatile bool paused = false;
+    std::thread workers[MAX_FETCHES];
+
+    static int singleFetch(FetchInfo& fetch, void* curlPtr);
 };
 
 #endif
