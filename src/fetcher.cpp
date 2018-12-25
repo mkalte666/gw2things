@@ -234,14 +234,15 @@ void Fetcher::drop(size_t fetchId)
 
 void Fetcher::tick()
 {
-    FetchInfo fetch;
+    std::vector<FetchInfo> fetches;
     {
         std::unique_lock<std::mutex> lock(completeMutex);
         if(!completeFetches.empty()) {
+            fetches.reserve(completeFetches.size());
             auto& info = completeFetches.front();
             auto dropIter = std::find(droppedIDs.begin(), droppedIDs.end(), info.fetchId);
             if (dropIter == droppedIDs.end()) {
-                fetch = std::move(info);
+                fetches.push_back(std::move(info));
             } else {
                 droppedIDs.erase(dropIter);
             }
@@ -249,7 +250,7 @@ void Fetcher::tick()
         }
     }
     
-    if (fetch.callback) {
+    for (auto& fetch : fetches) {
         if (fetch.success && fetch.callback) {
             fetch.callback(fetch.data);
         } else {

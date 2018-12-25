@@ -14,7 +14,7 @@ public:
     using CompleteFunction = std::function<void(void)>;
 
     static Workpool instance;
-    static void init(int maxWorkers=2);
+    static void init(int maxWorkers=4);
 
     void tick();
     void addTask(TaskFunction task, CompleteFunction complete);
