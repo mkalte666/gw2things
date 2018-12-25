@@ -36,6 +36,7 @@ private:
     std::string tmpApiKey = "";
     MapView mapview;
     BankData bank;
+    MaterialStorageData materialStorage;
 };
 
 #endif

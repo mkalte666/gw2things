@@ -124,6 +124,24 @@ struct MapData : public AbstractEndpoint {
 };
 json_helper(MapData);
 
+struct PriceData : public AbstractEndpoint {
+    PriceData()
+        : AbstractEndpoint("https://api.guildwars2.com/v2/commerce/prices/", 60*30)
+    {
+    }
+    virtual void fetch() override;
+
+    std::string niceString(int stack = 1);
+
+    int itemId = 0;
+    int sellCount = 0;
+    int sellPrice = 0;
+    int buyCount = 0;
+    int buyPrice = 0;
+    bool whitelisted = false;
+};
+json_helper(PriceData);
+
 struct ItemData : public AbstractEndpoint {
     ItemData(int tmpId = 0)
         : AbstractEndpoint("https://api.guildwars2.com/v2/items/", 60 * 60 * 24)
@@ -152,6 +170,7 @@ struct ItemData : public AbstractEndpoint {
     std::vector<std::string> flags;
     std::vector<std::string> gameTypes;
     std::vector<std::string> restrictions;
+    PriceData price;
 };
 json_helper(MapData);
 
@@ -174,6 +193,7 @@ struct InventorySlot {
     std::vector<std::shared_ptr<ItemData>> upgrades;
     std::vector<std::shared_ptr<ItemData>> infusions;
     void fetchFullData();
+    void draw();
 };
 json_helper(InventorySlot);
 
@@ -187,11 +207,29 @@ struct BankData : public AbstractEndpoint {
     virtual void show() override;
 
     std::vector<std::shared_ptr<InventorySlot>> slots;
+    bool disableFullFetch = false;
 
 private:
     std::string searchFilter;
 };
 json_helper(BankData);
+
+struct MaterialStorageData : public AbstractEndpoint {
+    MaterialStorageData()
+        : AbstractEndpoint("https://api.guildwars2.com/v2/account/materials", 10)
+    {
+    }
+    virtual void fetch() override;
+    virtual void onFetchComplete() override;
+    virtual void show() override;
+
+    std::vector<std::shared_ptr<InventorySlot>> slots;
+    bool disableFullFetch = false;
+
+private:
+    std::string searchFilter;
+};
+json_helper(MaterialStorageData);
 
 #undef json_helper
 #endif // _apytypes_h

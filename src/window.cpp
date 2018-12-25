@@ -87,6 +87,10 @@ bool Window::tick()
             bank.fetch();
             bank.visible = true;
         }
+        if (ImGui::MenuItem("Material Storage")) {
+            materialStorage.fetch();
+            materialStorage.visible = true;
+        }
         if (ImGui::MenuItem("Overview")) {
             testItem.id = 123;
             testItem.fetch();
@@ -106,6 +110,7 @@ bool Window::tick()
     mapview.show();
     testItem.show();
     bank.show();
+    materialStorage.show();
 
     return true;
 }

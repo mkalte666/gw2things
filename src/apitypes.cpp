@@ -1,10 +1,10 @@
 #include "apitypes.h"
 
 #include <SDL.h>
+#include <algorithm>
 #include <fetcher.h>
 #include <imgui.h>
 #include <misc/cpp/imgui_stdlib.h>
-#include <algorithm>
 
 using nlohmann::json;
 
@@ -16,7 +16,7 @@ struct adl_serializer<std::shared_ptr<T>> {
         if (!opt.get()) {
             opt = std::make_shared<T>();
         }
-        
+
         j.get_to(*opt);
     }
 
@@ -75,9 +75,15 @@ template <typename T>
 void jsonProcessor(T* target, const std::vector<char>& data)
 {
 #ifdef _DEBUG
-    SDL_Log("Got response: %s", std::string(data.begin(), data.end()).c_str());
+    //SDL_Log("Got response: %s", std::string(data.begin(), data.end()).c_str());
 #endif
     json j = json::parse(data);
+    // refetch if we get slapped
+    if (j.is_object() && j.value("text", std::string()) == "too many requests") {
+        target->maxCacheAge = -1; // enforce fetch
+        target->fetch();
+        return;
+    }
     j.get_to<T>(*target);
     target->onFetchComplete();
 }
@@ -285,6 +291,8 @@ void ItemData::onFetchComplete()
 {
     icon.url = iconUrlString;
     icon.fetch();
+    price.itemId = id;
+    price.fetch();
 }
 
 void ItemData::show()
@@ -367,6 +375,41 @@ void InventorySlot::fetchFullData()
     }
 }
 
+void InventorySlot::draw()
+{
+    if (!emptySlot && item) {
+        // icon
+        item->icon.imguiDraw();
+        // context menu on the icon
+        if (ImGui::BeginPopupContextItem(item->name.c_str())) {
+            if (ImGui::MenuItem("Details")) {
+                item->visible = true;
+            }
+            if (ImGui::MenuItem("Copy Chat Link")) {
+                SDL_SetClipboardText(item->chatLink.c_str());
+            }
+            ImGui::EndPopup();
+        }
+        item->show();
+
+        // the rest
+        ImGui::SameLine();
+        ImGui::BeginGroup();
+        ImGui::TextWrapped("%s", item->name.c_str());
+        ImGui::Text("Count: %d", count);
+        ImGui::TextWrapped("%s", item->price.niceString(count).c_str());
+        ImGui::EndGroup();
+
+        ImGui::SameLine(ImGui::GetWindowWidth() / 2.0f);
+        ImGui::BeginGroup();
+        ImGui::Text("Description");
+        ImGui::TextWrapped("%s", item->description.c_str());
+        ImGui::EndGroup();
+
+        
+    }
+}
+
 void from_json(const json& j, BankData& data)
 {
     data.slots.clear();
@@ -386,8 +429,10 @@ void BankData::fetch()
 
 void BankData::onFetchComplete()
 {
-    for (auto& slot : slots) {
-        slot->fetchFullData();
+    if (!disableFullFetch) {
+        for (auto& slot : slots) {
+            slot->fetchFullData();
+        }
     }
 }
 
@@ -406,29 +451,107 @@ void BankData::show()
 
     ImGui::BeginChild("Scrolling");
     for (auto& slot : slots) {
-        if (!slot->emptySlot &&  slot->item) {
+        if (!slot->emptySlot && slot->item) {
             auto& item = slot->item;
             if (!searchFilter.empty() && !item->matchSearch(searchFilter)) {
                 continue;
             }
 
-            item->icon.imguiDraw();
-
-            ImGui::SameLine();
-            ImGui::BeginGroup();
-            ImGui::TextWrapped("%s", item->name.c_str());
-            ImGui::Text("Count: %d", slot->count);
-            ImGui::EndGroup();
-            
-            ImGui::SameLine(ImGui::GetWindowWidth() / 2.0f);
-            ImGui::BeginGroup();
-            ImGui::Text("Description");
-            ImGui::TextWrapped("%s", item->description.c_str());
-            ImGui::EndGroup();
+            slot->draw();
         }
     }
     ImGui::EndChild();
     ImGui::End();
 }
 
+void from_json(const json& j, PriceData& data)
+{
+    json buys = j.value("buys", json());
+    json sells = j.value("sells", json());
+    if (sells.is_null() || buys.is_null()) {
+        return;
+    }
+    data.buyPrice = buys.value("unit_price", 0);
+    data.buyCount = buys.value("quantity", 0);
+    data.sellPrice = sells.value("unit_price", 0);
+    data.sellCount = sells.value("quantity", 0);
+    data.whitelisted = j.value("whitelisted", false);
+}
 
+void PriceData::fetch()
+{
+    Fetcher::fetcher.drop(fetchId);
+    fetchId = Fetcher::fetcher.fetch(endpoint + std::to_string(itemId), jsonProcBinder(*this), maxCacheAge);
+}
+
+std::string PriceData::niceString(int stack)
+{
+    if (sellCount == 0) {
+        return std::string("Not Traded");
+    }
+
+    std::string result;
+    result = "Buy: ";
+    result += std::to_string(buyPrice);
+    result += "\nSell: ";
+    result += std::to_string(sellPrice);
+    if (stack != 1) {
+        result += "\nBuy All";
+        result += std::to_string(buyPrice * stack);
+        result += "\nSell All: ";
+        result += std::to_string(sellPrice * stack);
+    }
+    return result;
+}
+
+void from_json(const json& j, MaterialStorageData& data)
+{
+    data.slots.clear();
+    try {
+        j.get_to(data.slots);
+    } catch (json::out_of_range) {
+    }
+}
+
+void MaterialStorageData::fetch()
+{
+    Fetcher::fetcher.drop(fetchId);
+    fetchId = Fetcher::fetcher.fetch(endpoint, jsonProcBinder(*this), maxCacheAge);
+}
+
+void MaterialStorageData::onFetchComplete()
+{
+    if (!disableFullFetch) {
+        for (auto& slot : slots) {
+            slot->fetchFullData();
+        }
+    }
+}
+
+void MaterialStorageData::show()
+{
+    if (!visible) {
+        return;
+    }
+
+    ImGui::Begin("Material Storage", &visible);
+    ImGui::InputText("Filter", &searchFilter);
+    ImGui::SameLine();
+    if (ImGui::Button("Clear")) {
+        searchFilter.clear();
+    }
+
+    ImGui::BeginChild("Scrolling");
+    for (auto& slot : slots) {
+        if (!slot->emptySlot && slot->item) {
+            auto& item = slot->item;
+            if (searchFilter.size() < 3 || !item->matchSearch(searchFilter)) {
+                continue;
+            }
+
+            slot->draw();
+        }
+    }
+    ImGui::EndChild();
+    ImGui::End();
+}
