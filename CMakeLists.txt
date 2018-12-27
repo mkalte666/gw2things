@@ -92,11 +92,33 @@ set(IMGUI_SOURCES
 
 add_library(imgui ${IMGUI_SOURCES})
 
+set(API_SOURCES 
+    src/api/accountoverview.cpp
+    src/api/accountoverview.h
+    src/api/bank.cpp
+    src/api/bank.h
+    src/api/continent.cpp
+    src/api/continent.h
+    src/api/endpoint.cpp
+    src/api/endpoint.h
+    src/api/guildpublic.cpp
+    src/api/guildpublic.h
+    src/api/inventory.cpp
+    src/api/inventory.h
+    src/api/item.cpp
+    src/api/item.h
+    src/api/map.cpp
+    src/api/map.h
+    src/api/materialstorage.cpp
+    src/api/materialstorage.h
+    src/api/price.cpp
+    src/api/price.h)
+
+add_library(gw2api ${API_SOURCES})    
+    
 # sources go here
 set(ALL_SOURCES 
     ${PROJECT_SOURCE_DIR}/3rdparty/gl3w/src/gl3w.c 
-    src/apitypes.cpp
-    src/apitypes.h
     src/env.cpp
     src/env.h
     src/main.cpp
@@ -118,6 +140,7 @@ add_executable(${_target_name} ${ALL_SOURCES})
 
 target_link_libraries(${_target_name}
                       imgui
+                      gw2api
                       ${SDL2_LIBRARY}
                       ${SDL2MAIN_LIBRARY}
                       ${SDL2_TTF_LIBRARY}
