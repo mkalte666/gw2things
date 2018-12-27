@@ -149,6 +149,10 @@ target_link_libraries(${_target_name}
                       # ${SDL2_MIXER_LIBRARY}
                       )
 
+if (UNIX)
+	target_link_libraries(${_target_name} dl rt)
+endif (UNIX)
+
 # now the tricky part: we need both the sdl build stuff *and* the whole project
 # tree however there are two problems: first, we dont want to copy everything
 # every time second, for the sdl2 libs, we need to know if we are 32 or 64 bit.

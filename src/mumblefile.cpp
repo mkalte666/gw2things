@@ -8,6 +8,8 @@
 #else
 #include <fcntl.h> /* For O_* constants */
 #include <sys/mman.h>
+#include <unistd.h>
+#include <sys/types.h>
 #endif // _WIN32
 
 #include <nlohmann/json.hpp>

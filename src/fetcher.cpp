@@ -32,6 +32,7 @@
 #include <sys/types.h>
 #include <time.h>
 #include <chrono>
+#include <algorithm>
 
 // singleton instance
 Fetcher Fetcher::fetcher;

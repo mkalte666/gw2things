@@ -8,6 +8,8 @@
 #include <nlohmann/json.hpp>
 #include <string>
 
+using nlohmann::json;
+
 #define json_helper(T) void from_json(const nlohmann::json& j, T& data);
 
 json_helper(SDL_Rect);
