@@ -25,9 +25,6 @@
 #include <SDL.h>
 #include <SDL_ttf.h>
 
-#define GL_GLEXT_PROTOTYPES 1
-#include <SDL2/SDL_opengles2.h>
-
 #include "GL/glcorearb.h"
 #include "GL/gl3w.h"
 
@@ -54,17 +51,17 @@ int main(int argc, char* argv[])
     }
 
     SDL_SetHint(SDL_HINT_RENDER_BATCHING, "1");
-    SDL_SetHint(SDL_HINT_RENDER_DRIVER, "opengles");
+    SDL_SetHint(SDL_HINT_RENDER_DRIVER, "opengles2");
 
     // we are runnable. put in own scope so we run some destructors of stack objects before everything explodes
     {
         Workpool::init(3);
         // GL 3.3 + GLSL 130
-        const char* glsl_version = "#version 330";
+        const char* glsl_version = "#version 100";
         SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, 0);
-        SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
-        SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
-        SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
+        SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);
+        SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 2);
+        SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);
         // Create window with graphics context
         SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
         SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
@@ -72,7 +69,7 @@ int main(int argc, char* argv[])
         SDL_DisplayMode current;
         SDL_GetCurrentDisplayMode(0, &current);
 
-        Env::mainWindow = SDL_CreateWindow("Dear ImGui SDL2+OpenGL3 example", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1280, 720, SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
+        Env::mainWindow = SDL_CreateWindow("GW2Things", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1280, 720, SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
         if (!Env::mainWindow) {
             std::cerr << "Cannot create window" << SDL_GetError() << std::endl;
             exit(3);
