@@ -87,10 +87,15 @@ int main(int argc, char* argv[])
         Env::init();
 
         // gl3w
-        bool err = gl3wInit() != 0;
+	auto gl3wres = gl3wInit();
+        bool err = gl3wres != 0;
         if (err) {
-            std::cerr << "Failed to init gl3w" << std::endl;
-            exit(3);
+            std::cerr << "Failed to init gl3w:" << gl3wres << std::endl;
+	    if (gl3wres == GL3W_ERROR_OPENGL_VERSION) {
+		std::cerr << "trying to continue with broken gl3w cause its a version mismatch error that can happen with gles contexts" << std::endl << "this might crash" << std::endl;
+	    } else {
+            	exit(3);
+	    }
         }
         // imgui setup
         // Setup Dear ImGui context
