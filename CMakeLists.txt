@@ -16,7 +16,7 @@
 
 # some cmake default foo
 cmake_minimum_required(VERSION 3.0)
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 14)
 
 # disable in-source build. found at
 # https://stackoverflow.com/questions/1208681/with-cmake-how-would-you-disable-
