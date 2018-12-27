@@ -3,6 +3,7 @@
 #include "SDL_image.h"
 #include "fetcher.h"
 #include "mumblefile.h"
+#include "env.h"
 
 glm::ivec2 coordToPixelOffset(const glm::ivec2& coord, int currentZoom, int maxZoom)
 {

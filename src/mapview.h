@@ -1,7 +1,7 @@
 #ifndef _mapview_h
 #define _mapview_h
 
-#include "apitypes.h"
+#include "api/map.h"
 
 class MapView {
 public:

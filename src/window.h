@@ -18,9 +18,12 @@
 #ifndef _window_h
 #define _window_h
 
-#include <fetcher.h>
-#include "apitypes.h"
+#include "api/accountoverview.h"
+#include "api/item.h"
+#include "api/bank.h"
+#include "api/materialstorage.h"
 #include "mapview.h"
+#include <fetcher.h>
 
 class Window {
 public:
