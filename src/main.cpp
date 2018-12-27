@@ -25,6 +25,9 @@
 #include <SDL.h>
 #include <SDL_ttf.h>
 
+#define GL_GLEXT_PROTOTYPES 1
+#include <SDL2/SDL_opengles2.h>
+
 #include "GL/glcorearb.h"
 #include "GL/gl3w.h"
 
@@ -51,7 +54,7 @@ int main(int argc, char* argv[])
     }
 
     SDL_SetHint(SDL_HINT_RENDER_BATCHING, "1");
-    SDL_SetHint(SDL_HINT_RENDER_DRIVER, "opengl");
+    SDL_SetHint(SDL_HINT_RENDER_DRIVER, "opengles");
 
     // we are runnable. put in own scope so we run some destructors of stack objects before everything explodes
     {

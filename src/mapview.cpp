@@ -147,5 +147,5 @@ void MapView::VisibleTile::fetch()
             SDL_FreeSurface(surface);
         }
     },
-        0LL);
+        (time_t)0);
 }

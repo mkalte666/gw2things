@@ -82,7 +82,7 @@ void Icon::imguiDraw()
         return;
     }
     // converted id gets rid of the warning that i try to plug glTex into void*
-    ImVec2 size(srcrect.w, srcrect.h);
+    ImVec2 size(static_cast<float>(srcrect.w), static_cast<float>(srcrect.h));
     ImGui::Image((void*)(intptr_t)glTex, size, ImVec2(0, 0), ImVec2(1, 1), ImVec4(1, 1, 1, 1), ImVec4(0, 0, 0, 0));
 }
 
@@ -108,7 +108,7 @@ void Icon::makeUrlFromFileResource(std::string name)
             _fetch();
         }
     },
-        0LL);
+        static_cast<time_t>(0));
 }
 
 void Icon::_fetch()
@@ -141,5 +141,5 @@ void Icon::_fetch()
             });
         
     },
-        0LL);
+        static_cast<time_t>(0));
 }
