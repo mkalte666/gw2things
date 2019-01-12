@@ -86,7 +86,7 @@ void InventorySlot::bulkFetch(std::vector<std::shared_ptr<InventorySlot>>& slots
     // upgrades are ignore for now. FIXME
     for (int i = 0; i < slots.size(); i++) {
         std::string bulkEndpoint = "https://api.guildwars2.com/v2/items?ids=";
-        for (int j = 0; j < 100 && i < slots.size(); j++, i++) {
+        for (int j = 0; j < 150 && i < slots.size(); j++, i++) {
             bulkEndpoint += std::to_string(slots[i]->itemId) + ",";
         }
 

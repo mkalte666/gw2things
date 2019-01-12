@@ -24,6 +24,7 @@
 
 #include <SDL.h>
 #include <SDL_ttf.h>
+#include <SDL_image.h>
 
 #include "GL/glcorearb.h"
 #include "GL/gl3w.h"
@@ -47,6 +48,12 @@ int main(int argc, char* argv[])
     rc = TTF_Init();
     if (rc < 0) {
         std::cerr << "Cannot init TTF!" << TTF_GetError() << std::endl;
+        exit(2);
+    }
+
+    rc = IMG_Init(IMG_INIT_JPG | IMG_INIT_PNG);
+    if (rc < 0) {
+        std::cerr << "Cannot init IMG!" << IMG_GetError() << std::endl;
         exit(2);
     }
 
@@ -87,15 +94,16 @@ int main(int argc, char* argv[])
         Env::init();
 
         // gl3w
-	auto gl3wres = gl3wInit();
+        auto gl3wres = gl3wInit();
         bool err = gl3wres != 0;
         if (err) {
             std::cerr << "Failed to init gl3w:" << gl3wres << std::endl;
-	    if (gl3wres == GL3W_ERROR_OPENGL_VERSION) {
-		std::cerr << "trying to continue with broken gl3w cause its a version mismatch error that can happen with gles contexts" << std::endl << "this might crash" << std::endl;
-	    } else {
-            	exit(3);
-	    }
+            if (gl3wres == GL3W_ERROR_OPENGL_VERSION) {
+                std::cerr << "trying to continue with broken gl3w cause its a version mismatch error that can happen with gles contexts" << std::endl
+                          << "this might crash" << std::endl;
+            } else {
+                exit(3);
+            }
         }
         // imgui setup
         // Setup Dear ImGui context
@@ -128,7 +136,7 @@ int main(int argc, char* argv[])
                 }
             }
 
-            // pre-render window clean 
+            // pre-render window clean
             SDL_SetRenderDrawColor(Env::mainRenderer, 0, 0, 0, 255);
             SDL_RenderClear(Env::mainRenderer);
 
@@ -137,7 +145,7 @@ int main(int argc, char* argv[])
             ImGui_ImplSDL2_NewFrame(Env::mainWindow);
             ImGui::NewFrame();
             SDL_GL_MakeCurrent(Env::mainWindow, Env::mainGlContext);
-            // tick the window 
+            // tick the window
             Fetcher::fetcher.tick();
             running = gui.tick();
 

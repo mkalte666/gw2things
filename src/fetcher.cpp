@@ -173,14 +173,7 @@ int Fetcher::singleFetch(FetchInfo& fetch, void* curlPtr)
     //ok, so we did a fetch and data is populated.
     // do we need to write this to the cache?
     if (fetch.maxAge >= 0) {
-        std::string filename = Env::makeCacheFilepath(makeId(fetch.url));
-        SDL_Log("Updating Cache for %s (%s))", fetch.url.c_str(), filename.c_str());
-
-        std::ofstream outfile(filename, std::ios::out | std::ios::trunc | std::ios::binary);
-        if (outfile.good()) {
-            outfile.write(fetch.data.data(), fetch.data.size());
-            outfile.close();
-        }
+        fillCache(fetch.url, fetch.data);
     }
 
     // done with writing to the file
@@ -218,6 +211,39 @@ size_t Fetcher::fetch(std::string url, FetcherCallback callback, time_t maxAge)
     info.fetchId = numFetches;
 
     return fetch(info);
+}
+
+void Fetcher::fillCache(const std::string& url, const std::vector<char>& data)
+{
+    std::string filename = Env::makeCacheFilepath(makeId(url));
+    SDL_Log("Updating Cache for %s (%s))", url.c_str(), filename.c_str());
+
+    std::ofstream outfile(filename, std::ios::out | std::ios::trunc | std::ios::binary);
+    if (outfile.good()) {
+        outfile.write(data.data(), data.size());
+        outfile.close();
+    }
+}
+
+bool Fetcher::isExpired(const std::string& url, time_t maxAge)
+{
+    if (maxAge < 0) {
+        return true;
+    }
+
+    std::string filename = Env::makeCacheFilepath(makeId(url));
+    std::ifstream file(filename, std::ios::in | std::ios::binary | std::ios::ate);
+
+    if (file.good()) {
+        struct stat statRes;
+        (void)stat(filename.c_str(), &statRes);
+        time_t age = time(nullptr) - statRes.st_mtime;
+        if (maxAge == 0 || age < maxAge) {
+            return false;
+        }
+    }
+
+    return true;
 }
 
 size_t Fetcher::fetch(FetchInfo& info)

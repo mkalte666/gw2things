@@ -1,9 +1,11 @@
 #ifndef _item_h
 #define _item_h
 
-#include "icon.h"
 #include "endpoint.h"
+#include "icon.h"
 #include "price.h"
+
+
 
 struct ItemData : public AbstractEndpoint {
     ItemData(int tmpId = 0)
@@ -34,7 +36,12 @@ struct ItemData : public AbstractEndpoint {
     std::vector<std::string> gameTypes;
     std::vector<std::string> restrictions;
     PriceData price;
+
+private:
+    
+    
 };
 json_helper(ItemData);
+
 
 #endif //_item_h

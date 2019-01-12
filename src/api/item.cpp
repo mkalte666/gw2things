@@ -4,6 +4,8 @@
 
 using nlohmann::json;
 
+
+
 void from_json(const json& j, ItemData& data)
 {
     data.id = j.value("id", 0);
@@ -74,3 +76,5 @@ bool ItemData::matchSearch(const std::string& query)
     return lowerName.find(lowerQuery) != lowerName.npos
         || lowerDescription.find(lowerQuery) != lowerDescription.npos;
 }
+
+

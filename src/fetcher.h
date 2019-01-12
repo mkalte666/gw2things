@@ -33,6 +33,9 @@ public:
 
     size_t fetch(std::string url, FetcherCallback callback, time_t maxAge = CACHE_DEFAULT_MAXAGE);
 
+    static void fillCache(const std::string& url, const std::vector<char>& data);
+    static bool isExpired(const std::string& url, time_t maxAge);
+
     void drop(size_t fetchId);
 
     void tick();

@@ -18,9 +18,10 @@
 #ifndef _window_h
 #define _window_h
 
+#include "api/itemcache.h"
 #include "api/accountoverview.h"
-#include "api/item.h"
 #include "api/bank.h"
+#include "api/item.h"
 #include "api/materialstorage.h"
 #include "mapview.h"
 #include <fetcher.h>
@@ -34,12 +35,16 @@ public:
 private:
     bool showKeyWindow = false;
     bool showAccountWindow = false;
+    bool showItemSearch = false;
+    std::string itemSearchQuery;
+    std::vector<std::shared_ptr<ItemData>> itemQueryResults;
     AccountOverviewData overviewData;
     ItemData testItem;
     std::string tmpApiKey = "";
     MapView mapview;
     BankData bank;
     MaterialStorageData materialStorage;
+    ItemCache itemCache;
 };
 
 #endif
