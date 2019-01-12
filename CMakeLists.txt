@@ -50,6 +50,7 @@ foreach(OUTPUTCONFIG ${CMAKE_CONFIGURATION_TYPES})
       ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY})
 endforeach(OUTPUTCONFIG CMAKE_CONFIGURATION_TYPES)
 
+
 # this is for the following find package. uncomment what you need.
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${PROJECT_SOURCE_DIR}/cmake)
 
@@ -107,6 +108,8 @@ set(API_SOURCES
     src/api/inventory.h
     src/api/item.cpp
     src/api/item.h
+    src/api/itemcache.cpp
+    src/api/itemcache.h
     src/api/map.cpp
     src/api/map.h
     src/api/materialstorage.cpp
@@ -130,6 +133,10 @@ set(ALL_SOURCES
     src/mapview.h
     src/mumblefile.cpp
     src/mumblefile.h
+    src/overlay.cpp
+    src/overlay.h
+    src/tracker.cpp
+    src/tracker.h
     src/window.cpp
     src/window.h
     src/workpool.cpp
@@ -173,24 +180,27 @@ else()
 endif()
 
 if(WIN32)
+    if (${CMAKE_CXX_COMPILER_ID} STREQUAL "MSVC")
+        SET(CMAKE_C_FLAGS  "${CMAKE_C_FLAGS} /MP")
+        SET(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} /MP")
+    endif()
 
-  # copy sdl2 stuff. uncomment what you need
-  add_custom_command(TARGET ${_target_name} POST_BUILD
-                     COMMAND ${CMAKE_COMMAND} -E copy_directory
-                             "${SDL2_PATH}/lib/${PROJECT_ARCHITECTURE}/"
-                             ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
-  add_custom_command(TARGET ${_target_name} POST_BUILD
-                     COMMAND ${CMAKE_COMMAND} -E copy_directory
-                             "${SDL2_TTF_PATH}/lib/${PROJECT_ARCHITECTURE}/"
-                             ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
-  add_custom_command(TARGET ${_target_name} POST_BUILD 
-                     COMMAND ${CMAKE_COMMAND} -E copy_directory
-                             "${SDL2_IMAGE_PATH}/lib/${PROJECT_ARCHITECTURE}/"
-                             ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}) 
+      # copy sdl2 stuff. uncomment what you need
+      add_custom_command(TARGET ${_target_name} POST_BUILD
+                         COMMAND ${CMAKE_COMMAND} -E copy_directory
+                                 "${SDL2_PATH}/lib/${PROJECT_ARCHITECTURE}/"
+                                 ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
+      add_custom_command(TARGET ${_target_name} POST_BUILD
+                         COMMAND ${CMAKE_COMMAND} -E copy_directory
+                                 "${SDL2_TTF_PATH}/lib/${PROJECT_ARCHITECTURE}/"
+                                 ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
+      add_custom_command(TARGET ${_target_name} POST_BUILD 
+                         COMMAND ${CMAKE_COMMAND} -E copy_directory
+                                 "${SDL2_IMAGE_PATH}/lib/${PROJECT_ARCHITECTURE}/"
+                                 ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}) 
 
-#add_custom_command(TARGET ${_target_name}
-  # POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory
-  # "${SDL2_MIXER_PATH}/lib/${PROJECT_ARCHITECTURE}/"
-  # ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
-
+    #add_custom_command(TARGET ${_target_name}
+      # POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory
+      # "${SDL2_MIXER_PATH}/lib/${PROJECT_ARCHITECTURE}/"
+      # ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
 endif(WIN32)

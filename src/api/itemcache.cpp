@@ -1,10 +1,12 @@
 #include "itemcache.h"
 #include "env.h"
 #include "fetcher.h"
+#include "imgui.h"
 #include <algorithm>
 #include <cctype>
 #include <fstream>
 #include <functional>
+#include <misc/cpp/imgui_stdlib.h>
 #include <workpool.h>
 
 bool my_isalpha(char ch)
@@ -22,9 +24,16 @@ char my_tolower(char c)
     return c;
 }
 
+ItemCache::TextIndex ItemCache::index;
+bool ItemCache::isLoading = false;
+bool ItemCache::needsLoad = true;
+int ItemCache::loadProgress = 0;
+
 ItemCache::ItemCache()
 {
-    Workpool::instance.addTask(std::bind(&ItemCache::readIndex, this), nullptr);
+    if (!isLoading && needsLoad) {
+        Workpool::instance.addTask(std::bind(&ItemCache::readIndex, this), nullptr);
+    }
 }
 
 void ItemCache::bulkFetchHelper(const std::vector<char>& data)
@@ -115,6 +124,11 @@ void ItemCache::saveIndex()
 
 void ItemCache::readIndex()
 {
+    if (isLoading || !needsLoad) {
+        return;
+    }
+
+    isLoading = true;
     std::string filename = Env::makeCacheFilepath("itemindex");
     std::ifstream file(filename);
     if (!file.good()) {
@@ -131,6 +145,7 @@ void ItemCache::readIndex()
     int size = 0;
     file >> size;
     SDL_Log("reading %d index entries", size);
+    int toLoad = size;
     while (size > 0 && !file.eof() && file.good()) {
         int refCount = 0;
         std::string tag;
@@ -147,9 +162,12 @@ void ItemCache::readIndex()
         }
         index.insert({ tag, std::move(items) });
         size--;
+        loadProgress = (100 * (toLoad - size)) / toLoad;
     }
 
     SDL_Log("done reading index");
+    needsLoad = false;
+    isLoading = false;
 }
 
 void ItemCache::update()
@@ -162,10 +180,73 @@ void ItemCache::update()
         0);
 }
 
-std::set<int> ItemCache::query(std::string str)
+std::set<int> ItemCache::query(std::string str, int limit)
 {
+    if (isLoading || needsLoad) {
+        return std::set<int>();
+    }
+
     std::transform(str.begin(), str.end(), str.begin(), my_tolower);
     const auto& ids = index[str];
     
+    if (ids.size() > limit) {
+        auto iter = ids.begin();
+        for (int i = 0; i < limit; i++, iter++);
+        std::set<int> limitSet(ids.begin(),iter);
+        return limitSet;
+    }
     return ids;
+}
+
+void ItemCache::show()
+{
+    if (!visible) {
+        return;
+    }
+    ImGui::Begin("item search", &visible);
+    if (ImGui::InputText("item query", &itemSearchQuery)) {
+        itemQueryResults.clear();
+        for (auto itemId : query(itemSearchQuery)) {
+            auto item = std::make_shared<ItemData>(itemId);
+            item->fetch();
+            itemQueryResults.push_back(item);
+        }
+    }
+
+    if (needsLoad || isLoading) {
+        ImGui::Text("Cache is still Loading... %d%%", loadProgress);
+    } else {
+        ImGui::BeginChild("scroll");
+        for (auto item : itemQueryResults) {
+            item->icon.imguiDraw();
+            // context menu on the icon
+            if (ImGui::BeginPopupContextItem(item->name.c_str())) {
+                if (ImGui::MenuItem("Details")) {
+                    item->visible = true;
+                }
+                if (ImGui::MenuItem("Copy Chat Link")) {
+                    SDL_SetClipboardText(item->chatLink.c_str());
+                }
+                ImGui::EndPopup();
+            }
+            item->show();
+
+            // the rest
+            ImGui::SameLine();
+            ImGui::BeginGroup();
+            ImGui::TextWrapped("%s", item->name.c_str());
+            ImGui::TextWrapped("%s", item->price.niceString().c_str());
+            ImGui::EndGroup();
+
+            ImGui::SameLine(ImGui::GetWindowWidth() / 2.0f);
+            ImGui::BeginGroup();
+            ImGui::Text("Description");
+            ImGui::TextWrapped("%s", item->description.c_str());
+            ImGui::EndGroup();
+            ImGui::Separator();
+        }
+        ImGui::EndChild();
+    }
+
+    ImGui::End();
 }

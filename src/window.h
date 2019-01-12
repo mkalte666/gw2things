@@ -35,9 +35,6 @@ public:
 private:
     bool showKeyWindow = false;
     bool showAccountWindow = false;
-    bool showItemSearch = false;
-    std::string itemSearchQuery;
-    std::vector<std::shared_ptr<ItemData>> itemQueryResults;
     AccountOverviewData overviewData;
     ItemData testItem;
     std::string tmpApiKey = "";

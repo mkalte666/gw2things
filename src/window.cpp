@@ -84,7 +84,7 @@ bool Window::tick()
 
     if (ImGui::BeginMenu("Items")) {
         if (ImGui::MenuItem("Search Item")) {
-            showItemSearch = true;
+            itemCache.visible = true;
         }
         if (ImGui::MenuItem("Bank Content")) {
             bank.fetch();
@@ -110,49 +110,7 @@ bool Window::tick()
         keyWindow();
     }
 
-    if (showItemSearch) {
-        ImGui::Begin("item search", &showItemSearch);
-        if (ImGui::InputText("item query", &itemSearchQuery)) {
-            itemQueryResults.clear();
-            for (auto itemId : itemCache.query(itemSearchQuery)) {
-                auto item = std::make_shared<ItemData>(itemId);
-                item->fetch();
-                itemQueryResults.push_back(item);
-            }
-        }
-
-        ImGui::BeginChild("scroll");
-        for (auto item : itemQueryResults) {
-            item->icon.imguiDraw();
-            // context menu on the icon
-            if (ImGui::BeginPopupContextItem(item->name.c_str())) {
-                if (ImGui::MenuItem("Details")) {
-                    item->visible = true;
-                }
-                if (ImGui::MenuItem("Copy Chat Link")) {
-                    SDL_SetClipboardText(item->chatLink.c_str());
-                }
-                ImGui::EndPopup();
-            }
-            item->show();
-
-            // the rest
-            ImGui::SameLine();
-            ImGui::BeginGroup();
-            ImGui::TextWrapped("%s", item->name.c_str());
-            ImGui::TextWrapped("%s", item->price.niceString().c_str());
-            ImGui::EndGroup();
-
-            ImGui::SameLine(ImGui::GetWindowWidth() / 2.0f);
-            ImGui::BeginGroup();
-            ImGui::Text("Description");
-            ImGui::TextWrapped("%s", item->description.c_str());
-            ImGui::EndGroup();
-            ImGui::Separator();
-        }
-        ImGui::EndChild();
-        ImGui::End();
-    }
+    
 
     overviewData.show();
 
@@ -161,6 +119,7 @@ bool Window::tick()
     testItem.show();
     bank.show();
     materialStorage.show();
+    itemCache.show();
 
     return true;
 }

@@ -10,8 +10,11 @@ public:
     ItemCache();
     void update();
 
-    std::set<int> query(std::string str);
-    
+    std::set<int> query(std::string str, int limit = 50);
+    void show();
+
+    bool visible = false;
+
 private:
     using TextIndex = std::map<std::string, std::set<int>>;
     void bulkFetchHelper(const std::vector<char>& data);
@@ -23,7 +26,13 @@ private:
     void saveIndex();
     void readIndex();
 
-    TextIndex index;
+    static TextIndex index;
+    static bool needsLoad;
+    static bool isLoading;
+    static int loadProgress;
+
+    std::string itemSearchQuery;
+    std::vector<std::shared_ptr<ItemData>> itemQueryResults;
 };
 
 #endif //_item_cache_h
