@@ -10,13 +10,13 @@ public:
     ItemCache();
     void update();
 
-    std::set<int> query(std::string str, int limit = 50);
+    std::vector<int> query(std::string str, int limit = 50);
     void show();
 
     bool visible = false;
 
 private:
-    using TextIndex = std::map<std::string, std::set<int>>;
+    using TextIndex = std::map<std::string, std::vector<int>>;
     void bulkFetchHelper(const std::vector<char>& data);
     std::vector<int> idsLeft;
 

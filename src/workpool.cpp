@@ -44,6 +44,9 @@ void Workpool::addTask(TaskFunction task, CompleteFunction complete)
 void Workpool::worker()
 {
     while (running) {
+        // limit cpu usage
+        using namespace std::chrono;
+        std::this_thread::sleep_for(10ms);
         Task task;
         {
             std::lock_guard<std::mutex> lock(scheduleLock);

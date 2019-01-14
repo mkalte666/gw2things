@@ -71,7 +71,10 @@ void ItemCache::bulkFetchHelper(const std::vector<char>& data)
 
 void ItemCache::addToIndex(const std::string& word, int itemId)
 {
-    index[word].insert(itemId);
+    auto& wordlist = index[word];
+    if (std::find(wordlist.begin(), wordlist.end(), itemId) == wordlist.end()) {
+        wordlist.push_back(itemId);
+    }
 }
 
 void ItemCache::breakDownForIndex(const json& j)
@@ -154,13 +157,14 @@ void ItemCache::readIndex()
             continue;
         }
         file >> refCount;
-        std::set<int> items;
+        std::vector<int> items;
+        items.resize(refCount);
         for (int i = 0; i < refCount; i++) {
             int id = 0;
             file >> id;
-            items.insert(id);
+            items[i] = id;
         }
-        index.insert({ tag, std::move(items) });
+        index[tag] = std::move(items);
         size--;
         loadProgress = (100 * (toLoad - size)) / toLoad;
     }
@@ -180,10 +184,10 @@ void ItemCache::update()
         0);
 }
 
-std::set<int> ItemCache::query(std::string str, int limit)
+std::vector<int> ItemCache::query(std::string str, int limit)
 {
     if (isLoading || needsLoad) {
-        return std::set<int>();
+        return std::vector<int>();
     }
 
     std::transform(str.begin(), str.end(), str.begin(), my_tolower);
@@ -192,7 +196,7 @@ std::set<int> ItemCache::query(std::string str, int limit)
     if (ids.size() > limit) {
         auto iter = ids.begin();
         for (int i = 0; i < limit; i++, iter++);
-        std::set<int> limitSet(ids.begin(),iter);
+        std::vector<int> limitSet(ids.begin(),iter);
         return limitSet;
     }
     return ids;
