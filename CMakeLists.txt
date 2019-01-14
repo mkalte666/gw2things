@@ -94,10 +94,16 @@ set(IMGUI_SOURCES
 add_library(imgui ${IMGUI_SOURCES})
 
 set(API_SOURCES 
+    src/api/accountcharacters.cpp
+    src/api/accountcharacters.h
+    src/api/accountinventory.cpp
+    src/api/accountinventory.h
     src/api/accountoverview.cpp
     src/api/accountoverview.h
     src/api/bank.cpp
     src/api/bank.h
+    src/api/character.cpp
+    src/api/character.h
     src/api/continent.cpp
     src/api/continent.h
     src/api/endpoint.cpp
