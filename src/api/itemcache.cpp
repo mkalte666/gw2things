@@ -7,6 +7,7 @@
 #include <fstream>
 #include <functional>
 #include <misc/cpp/imgui_stdlib.h>
+#include <type_traits>
 #include <workpool.h>
 
 bool my_isalpha(char ch)
@@ -22,6 +23,43 @@ char my_tolower(char c)
     }
 
     return c;
+}
+
+template <class T>
+void writeT(std::fstream& f, const T& in)
+{
+    f.write(reinterpret_cast<const char*>(&in), sizeof(T));
+}
+
+template <class T>
+T readT(std::fstream& f)
+{
+    T result;
+    f.read(reinterpret_cast<char*>(&result), sizeof(T));
+
+    return result;
+}
+
+inline void writeString(std::fstream& file, const std::string& s)
+{
+    uint32_t size = static_cast<int32_t>(s.size());
+    writeT(file, size);
+
+    if (size > 0) {
+        file.write(s.data(), s.size());
+    }
+}
+
+inline std::string readString(std::fstream& file)
+{
+    std::string result;
+    uint32_t size = readT<uint32_t>(file);
+    if (size > 0) {
+        result.resize(size);
+        file.read(&result[0], size);
+    }
+
+    return result;
 }
 
 ItemCache::TextIndex ItemCache::index;
@@ -79,20 +117,19 @@ void ItemCache::addToIndex(const std::string& word, int itemId)
 
 void ItemCache::breakDownForIndex(const json& j)
 {
-    ItemData item;
-    j.get_to(item);
+    int id = j.value("id", 0);
 
     std::vector<std::string> toIndex = {
-        item.chatLink,
-        item.description,
-        item.name
+        j.value("chat_link", ""),
+        j.value("description", ""),
+        j.value("name", "")
     };
     for (auto str : toIndex) {
         if (str.empty()) {
             continue;
         }
         std::transform(str.begin(), str.end(), str.begin(), my_tolower);
-        addToIndex(str, item.id);
+        addToIndex(str, id);
         for (
             std::string::iterator pos = std::find_if(str.begin(), str.end(), my_isalpha), end;
             pos != str.end();
@@ -101,7 +138,7 @@ void ItemCache::breakDownForIndex(const json& j)
             end = std::find_if_not(pos, str.end(), my_isalpha);
             std::string tag(pos, end);
             if (!tag.empty() && tag.size() >= 3) {
-                addToIndex(tag, item.id);
+                addToIndex(tag, id);
             }
         }
     }
@@ -110,15 +147,23 @@ void ItemCache::breakDownForIndex(const json& j)
 void ItemCache::saveIndex()
 {
     std::string filename = Env::makeCacheFilepath("itemindex");
-    std::ofstream file(filename, std::ios::out);
-    file << "v1"
-         << "\n";
-    file << index.size() << "\n";
+    std::fstream file(filename, std::ios::out | std::ios::binary);
+    if (!file.good()) {
+        return;
+    }
+
+    std::string versionNumber("cv2");
+    writeString(file, versionNumber);
+    uint32_t tagCount = static_cast<uint32_t>(index.size());
+    writeT(file, tagCount);
+
     for (const auto& p : index) {
-        file << p.first.c_str() << "\n";
-        file << p.second.size() << "\n";
+        writeString(file, p.first);
+        uint32_t count = static_cast<uint32_t>(p.second.size());
+        writeT(file, count);
         for (const auto& id : p.second) {
-            file << id << "\n";
+            int32_t fixedSizeId = id;
+            writeT(file, fixedSizeId);
         }
     }
 
@@ -133,40 +178,41 @@ void ItemCache::readIndex()
 
     isLoading = true;
     std::string filename = Env::makeCacheFilepath("itemindex");
-    std::ifstream file(filename);
+    std::fstream file(filename, std::ios::in | std::ios::binary);
     if (!file.good()) {
         return;
     }
 
-    std::string version;
-    file >> version;
-    if (version != "v1") {
+    std::string version = readString(file);
+
+    if (version != "cv2") {
         SDL_Log("item cahce format not supported");
         return;
     }
 
-    int size = 0;
-    file >> size;
-    SDL_Log("reading %d index entries", size);
-    int toLoad = size;
-    while (size > 0 && !file.eof() && file.good()) {
-        int refCount = 0;
-        std::string tag;
-        std::getline(file, tag);
+    uint32_t tagCount = 0;
+    tagCount = readT<uint32_t>(file);
+    SDL_Log("reading %d index entries", tagCount);
+
+
+    auto toLoad = tagCount;
+    while (tagCount > 0 && !file.eof() && file.good()) {
+        std::string tag = readString(file);
         if (tag.empty()) {
             continue;
         }
-        file >> refCount;
+
+        uint32_t refCount = readT<uint32_t>(file);
         std::vector<int> items;
         items.resize(refCount);
-        for (int i = 0; i < refCount; i++) {
-            int id = 0;
-            file >> id;
+
+        for (uint32_t i = 0; i < refCount; i++) {
+            int32_t id = readT<int32_t>(file);
             items[i] = id;
         }
         index[tag] = std::move(items);
-        size--;
-        loadProgress = (100 * (toLoad - size)) / toLoad;
+        tagCount--;
+        loadProgress = (100 * (toLoad - tagCount)) / toLoad;
     }
 
     SDL_Log("done reading index");
@@ -192,11 +238,12 @@ std::vector<int> ItemCache::query(std::string str, int limit)
 
     std::transform(str.begin(), str.end(), str.begin(), my_tolower);
     const auto& ids = index[str];
-    
+
     if (ids.size() > limit) {
         auto iter = ids.begin();
-        for (int i = 0; i < limit; i++, iter++);
-        std::vector<int> limitSet(ids.begin(),iter);
+        for (int i = 0; i < limit; i++, iter++)
+            ;
+        std::vector<int> limitSet(ids.begin(), iter);
         return limitSet;
     }
     return ids;

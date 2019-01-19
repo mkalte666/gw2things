@@ -238,11 +238,8 @@ bool Fetcher::isExpired(const std::string& url, time_t maxAge)
     }
 
     std::string filename = Env::makeCacheFilepath(makeId(url));
-    std::ifstream file(filename, std::ios::in | std::ios::binary | std::ios::ate);
-
-    if (file.good()) {
-        struct stat statRes;
-        (void)stat(filename.c_str(), &statRes);
+    struct stat statRes;
+    if (stat(filename.c_str(), &statRes) == 0) {
         time_t age = time(nullptr) - statRes.st_mtime;
         if (maxAge == 0 || age < maxAge) {
             return false;
@@ -262,7 +259,10 @@ size_t Fetcher::fetch(FetchInfo& info)
 
 void Fetcher::drop(size_t fetchId)
 {
-    droppedIDs.push_back(fetchId);
+    std::unique_lock<std::mutex> lock(completeMutex);
+    if (fetchId != 0 && std::find(droppedIDs.begin(), droppedIDs.end(), fetchId) == droppedIDs.end()) {
+        droppedIDs.push_back(fetchId);
+    }
 }
 
 void Fetcher::tick()
