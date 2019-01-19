@@ -22,7 +22,10 @@ void MaterialStorageData::fetch()
 void MaterialStorageData::onFetchComplete()
 {
     if (!disableFullFetch) {
-        InventorySlot::bulkFetch(slots);
+        //InventorySlot::bulkFetch(slots);
+        for (auto& s : slots) {
+            s->fetchFullData();
+        }
     }
 }
 

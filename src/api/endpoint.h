@@ -36,10 +36,13 @@ struct AbstractEndpoint {
     AbstractEndpoint(AbstractEndpoint&& other) = delete;
 
     bool visible = false;
+    bool fetchedOnce = false;
     std::string endpoint = "";
     time_t maxCacheAge = 0;
     size_t fetchId = 0;
     virtual void fetch() = 0;
+    virtual void fetchOnce();
+
     virtual void show(){};
 
     virtual void onFetchComplete(){};

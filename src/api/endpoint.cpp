@@ -51,6 +51,15 @@ AbstractEndpoint::~AbstractEndpoint()
     Fetcher::fetcher.drop(fetchId);
 }
 
+void AbstractEndpoint::fetchOnce()
+{
+    if (fetchedOnce) {
+        return;
+    }
+    fetchedOnce = false;
+    fetch();
+}
+
 void toLower(std::string& input)
 {
     std::transform(input.begin(), input.end(), input.begin(), ::tolower);

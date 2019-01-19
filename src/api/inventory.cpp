@@ -81,7 +81,7 @@ void InventorySlot::draw()
     }
 }
 
-void InventorySlot::bulkFetch(std::vector<std::shared_ptr<InventorySlot>>& slots)
+void InventorySlot::bulkFetch(std::vector<std::shared_ptr<InventorySlot>>& slots) 
 {
     // upgrades are ignore for now. FIXME
     for (int i = 0; i < slots.size(); i++) {

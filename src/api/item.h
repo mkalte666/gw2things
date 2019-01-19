@@ -9,7 +9,7 @@
 
 struct ItemData : public AbstractEndpoint {
     ItemData(int tmpId = 0)
-        : AbstractEndpoint("https://api.guildwars2.com/v2/items/", 60 * 60 * 24)
+        : AbstractEndpoint("https://api.guildwars2.com/v2/items/", 0)
         , id(tmpId)
     {
     }

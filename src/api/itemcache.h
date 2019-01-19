@@ -11,6 +11,7 @@ public:
     void update();
 
     std::vector<int> query(std::string str, int limit = 50);
+    std::shared_ptr<ItemData> getItem(int id, bool doFetch = true) const;
     void show();
 
     bool visible = false;

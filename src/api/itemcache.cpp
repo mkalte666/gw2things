@@ -249,6 +249,17 @@ std::vector<int> ItemCache::query(std::string str, int limit)
     return ids;
 }
 
+std::shared_ptr<ItemData> ItemCache::getItem(int id, bool doFetch) const
+{
+    auto item = std::make_shared<ItemData>(id);
+
+    if (doFetch) {
+        item->fetchOnce();
+    }
+
+    return item;
+}
+
 void ItemCache::show()
 {
     if (!visible) {
