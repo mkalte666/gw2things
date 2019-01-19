@@ -79,6 +79,10 @@ bool Window::tick()
             overviewData.fetch();
             overviewData.visible = true;
         }
+        if (ImGui::MenuItem("Characters")) {
+            accountCharacters.fetch();
+            accountCharacters.visible = true;
+        }
         ImGui::EndMenu();
     }
 
@@ -120,6 +124,7 @@ bool Window::tick()
     bank.show();
     materialStorage.show();
     itemCache.show();
+    accountCharacters.show();
 
     return true;
 }

@@ -23,6 +23,7 @@
 #include "api/bank.h"
 #include "api/item.h"
 #include "api/materialstorage.h"
+#include "api/accountcharacters.h"
 #include "mapview.h"
 #include <fetcher.h>
 
@@ -42,6 +43,7 @@ private:
     BankData bank;
     MaterialStorageData materialStorage;
     ItemCache itemCache;
+    AccountCharacterData accountCharacters;
 };
 
 #endif

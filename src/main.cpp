@@ -133,6 +133,7 @@ int main(int argc, char* argv[])
                 ImGui_ImplSDL2_ProcessEvent(&e);
                 if (e.type == SDL_QUIT) {
                     running = false;
+                    break;
                 }
             }
 
@@ -147,7 +148,7 @@ int main(int argc, char* argv[])
             SDL_GL_MakeCurrent(Env::mainWindow, Env::mainGlContext);
             // tick the window
             Fetcher::fetcher.tick();
-            running = gui.tick();
+            running &= gui.tick();
 
             // flush the renderer before we do our own code
             // does its own context switch

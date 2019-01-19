@@ -26,13 +26,13 @@
 #include <thread>
 
 // stat party
+#include <algorithm>
+#include <chrono>
 #include <errno.h>
 #include <stdio.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <time.h>
-#include <chrono>
-#include <algorithm>
 
 // singleton instance
 Fetcher Fetcher::fetcher;
@@ -150,7 +150,14 @@ int Fetcher::singleFetch(FetchInfo& fetch, void* curlPtr)
     }
 
     // set the stuff up
-    curl_easy_setopt(curl, CURLOPT_URL, fetch.url.c_str());
+    //char* escapedUrl = curl_easy_escape(curl, fetch.url.c_str(), fetch.url.size());
+    //if (escapedUrl) {
+    //    curl_easy_setopt(curl, CURLOPT_URL, escapedUrl);
+    //    curl_free(escapedUrl);
+    //} else {
+        curl_easy_setopt(curl, CURLOPT_URL, fetch.url.c_str());
+    //}
+
     curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, writefunc);
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, &fetch.data);
@@ -168,7 +175,6 @@ int Fetcher::singleFetch(FetchInfo& fetch, void* curlPtr)
     }
 
     curl_slist_free_all(slist);
-    
 
     //ok, so we did a fetch and data is populated.
     // do we need to write this to the cache?
@@ -187,7 +193,7 @@ Fetcher::Fetcher()
     curl_global_init(CURL_GLOBAL_DEFAULT);
     running = true;
     for (int i = 0; i < MAX_FETCHES; i++) {
-        workers[i] = std::thread(std::bind(&Fetcher::fetchWorker,this));
+        workers[i] = std::thread(std::bind(&Fetcher::fetchWorker, this));
     }
 }
 
@@ -198,7 +204,7 @@ Fetcher::~Fetcher()
         workers[i].join();
     }
 
-    curl_global_cleanup();    
+    curl_global_cleanup();
 }
 
 size_t Fetcher::fetch(std::string url, FetcherCallback callback, time_t maxAge)
@@ -264,7 +270,7 @@ void Fetcher::tick()
     std::vector<FetchInfo> fetches;
     {
         std::unique_lock<std::mutex> lock(completeMutex);
-        if(!completeFetches.empty()) {
+        if (!completeFetches.empty()) {
             fetches.reserve(completeFetches.size());
             auto& info = completeFetches.front();
             auto dropIter = std::find(droppedIDs.begin(), droppedIDs.end(), info.fetchId);
@@ -276,7 +282,7 @@ void Fetcher::tick()
             completeFetches.pop();
         }
     }
-    
+
     for (auto& fetch : fetches) {
         if (fetch.success && fetch.callback) {
             fetch.callback(fetch.data);
